@@ -176,6 +176,7 @@ let cheDoKhoa = 'cho';   // 'cho' (đang tải) | 'mo' | 'tao'
 const chuNut = () => ({ tao: 'Tạo sổ', mo: 'Mở sổ', cho: 'Đang tải sổ…' }[cheDoKhoa]);
 
 function hienKhoa(cheDo, moTa) {
+  const tuCho = cheDoKhoa === 'cho' && cheDo === 'mo';
   cheDoKhoa = cheDo;
   document.body.classList.add('dang-khoa');
   K.el.hidden = false;
@@ -187,9 +188,12 @@ function hienKhoa(cheDo, moTa) {
   K.nut.disabled = cheDo === 'cho';
   K.mota.textContent = moTa || { tao: 'Chưa có sổ nào. Đặt mật khẩu để tạo sổ mới.', mo: 'Gõ mật khẩu để xem sổ.', cho: 'Đang tải sổ…' }[cheDo];
   K.loi.textContent = '';
-  K.mk.value = K.mk2.value = '';
+  if (!tuCho) K.mk.value = K.mk2.value = '';
+  giaTriDaThu = '';
   K.phu.innerHTML = cheDo === 'mo' ? '<button type="button" id="khoa-quen">Quên mật khẩu?</button>' : '';
-  if (cheDo !== 'cho') setTimeout(() => K.mk.focus(), 60);
+  if (cheDo !== 'tao') V.lamNong();
+  setTimeout(() => K.mk.focus(), 60);
+  if (tuCho) tuThu();
 }
 
 function lacKhoa(chu) {
@@ -229,6 +233,46 @@ async function thuMo(blob, mk, khoaSan = null) {
   try { const khoa = khoaSan || await V.danKhoa(mk, blob); return { st: await V.giaiMa(blob, khoa), khoa, blob }; } catch { return null; }
 }
 
+/**
+ * Mở sổ bằng mật khẩu: thử bản trên web trước, rồi bản trên máy (nếu khác "dòng").
+ * Trả true nếu mở được. Không tự báo lỗi — nơi gọi quyết định báo thế nào.
+ */
+async function moBangMatKhau(mk) {
+  const local = V.docMay(), web = banWeb?.blob || null;
+  const cungDong = !!(local && web && local.salt === web.salt);
+  let r = await thuMo(web, mk);
+  if (r) {
+    if (cungDong) r = (await thuMo(local, mk, r.khoa)) || r;      // máy có thể có sửa chưa đăng → mở bản máy, đồng bộ sẽ gộp
+    else { if (local) V.catDuPhong(); V.ghiMay(web); }
+  } else if (local && !cungDong) {
+    r = await thuMo(local, mk);                                   // sổ riêng trên máy (web chưa có / mật khẩu khác)
+  }
+  if (!r || cheDoKhoa !== 'mo') return false;
+  S.nho = $('#nho-may').checked;
+  if (S.nho) await V.nhoKhoa(r.khoa, r.blob.salt); else await V.quenKhoa();
+  await moSo(r.st, r.khoa, V.thamCua(r.blob), mk);
+  return true;
+}
+
+// Gõ đủ 6 ký tự là tự thử — đúng thì vào luôn, không cần bấm nút.
+// Dẫn khoá chạy trong Worker nên vẫn gõ tiếp được; chỉ 1 lượt thử một lúc, xong lượt thì thử giá trị mới nhất.
+const DAI_TOI_THIEU = 6;
+let dangThu = false, giaTriDaThu = '';
+async function tuThu() {
+  if (cheDoKhoa !== 'mo' || dangThu) return;
+  const mk = K.mk.value;
+  if (mk.length < DAI_TOI_THIEU || mk === giaTriDaThu) return;
+  dangThu = true; giaTriDaThu = mk;
+  K.el.classList.add('dang-thu'); K.el.setAttribute('aria-busy', 'true');
+  let vao = false;
+  try { vao = await moBangMatKhau(mk); } catch { vao = false; }
+  dangThu = false;
+  K.el.classList.remove('dang-thu'); K.el.removeAttribute('aria-busy');
+  if (vao) return;
+  if (K.mk.value !== mk) { tuThu(); return; }
+  K.loi.textContent = 'Chưa đúng mật khẩu.';
+}
+
 K.form.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (cheDoKhoa === 'cho') return;
@@ -249,23 +293,20 @@ K.form.addEventListener('submit', async (e) => {
       await moSo(st, khoa, tham, mk);
       return;
     }
-    const local = V.docMay(), web = banWeb?.blob || null;
-    const cungDong = !!(local && web && local.salt === web.salt);
-    let r = await thuMo(web, mk);
-    if (r) {
-      if (cungDong) r = (await thuMo(local, mk, r.khoa)) || r;      // máy có thể có sửa chưa đăng → mở bản máy, đồng bộ sẽ gộp
-      else { if (local) V.catDuPhong(); V.ghiMay(web); }
-    } else if (local && !cungDong) {
-      r = await thuMo(local, mk);                                   // sổ riêng trên máy (web chưa có / mật khẩu khác)
-    }
-    if (!r) { lacKhoa('Sai mật khẩu.'); return; }
-    if (S.nho) await V.nhoKhoa(r.khoa, r.blob.salt); else await V.quenKhoa();
-    await moSo(r.st, r.khoa, V.thamCua(r.blob), mk);
+    while (dangThu) await new Promise((ok) => setTimeout(ok, 50));   // đang tự thử đúng giá trị này thì chờ kết quả
+    if (cheDoKhoa !== 'mo' || K.el.hidden) return;
+    giaTriDaThu = mk;
+    if (!(await moBangMatKhau(mk))) lacKhoa('Sai mật khẩu.');
   } catch (er) {
     lacKhoa(er.message);
-  } finally { K.nut.disabled = false; K.nut.textContent = chuNut(); }
+  } finally { K.nut.disabled = cheDoKhoa === 'cho'; K.nut.textContent = chuNut(); }
 });
-K.mk.addEventListener('input', () => { if (cheDoKhoa === 'tao') $('#do-manh').dataset.d = V.doManh(K.mk.value); });
+K.mk.addEventListener('input', () => {
+  if (cheDoKhoa === 'tao') { $('#do-manh').dataset.d = V.doManh(K.mk.value); return; }
+  K.loi.textContent = '';
+  tuThu();
+});
+K.mk.addEventListener('change', () => tuThu());   // trình duyệt tự điền mật khẩu đã lưu
 // Bàn phím số / chữ cho ô mật khẩu trên điện thoại (nhớ lựa chọn)
 function datBanPhim(so) {
   K.mk.inputMode = so ? 'numeric' : 'text';

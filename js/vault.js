@@ -31,6 +31,44 @@ function napArgon() {
   return hwPromise;
 }
 
+// Argon2id chạy trong Worker (tốn ~1 s CPU) để trang không khựng khi đang gõ mật khẩu.
+let worker = null, soLuot = 0;
+const choKq = new Map();
+function layWorker() {
+  if (worker !== null) return worker;
+  try {
+    const thuVien = new URL('lib/argon2.umd.min.js', location.href).href;
+    const ma = `importScripts(${JSON.stringify(thuVien)});
+self.onmessage = async (e) => {
+  const d = e.data;
+  try {
+    const raw = await self.hashwasm.argon2id({ password: d.mk, salt: new Uint8Array(d.salt), parallelism: d.p, iterations: d.t, memorySize: d.m, hashLength: 32, outputType: 'binary' });
+    self.postMessage({ id: d.id, raw: raw.buffer }, [raw.buffer]);
+  } catch (er) { self.postMessage({ id: d.id, loi: String(er && er.message || er) }); }
+};`;
+    worker = new Worker(URL.createObjectURL(new Blob([ma], { type: 'text/javascript' })));
+    worker.onmessage = (e) => {
+      const c = choKq.get(e.data.id);
+      if (!c) return;
+      choKq.delete(e.data.id);
+      if (e.data.loi) c.rej(new Error(e.data.loi)); else c.res(new Uint8Array(e.data.raw));
+    };
+    worker.onerror = () => { worker = false; choKq.forEach((c) => c.rej(new Error('worker'))); choKq.clear(); };
+  } catch { worker = false; }
+  return worker;
+}
+/** Dựng sẵn Worker (nạp thư viện trước) để lượt thử mật khẩu đầu tiên không phải chờ. */
+export const lamNong = () => { layWorker(); };
+function argonTrongWorker(mk, th) {
+  const w = layWorker();
+  if (!w) return Promise.reject(new Error('worker'));
+  const id = ++soLuot;
+  return new Promise((res, rej) => {
+    choKq.set(id, { res, rej });
+    w.postMessage({ id, mk, salt: [...unb64(th.salt)], m: th.m, t: th.t, p: th.p });
+  });
+}
+
 /** Tham số dẫn khoá cho một sổ mới. */
 export const thamMoi = () => ({ kdf: 'argon2id', salt: taoMuoi(), ...ARGON });
 
@@ -43,11 +81,15 @@ export const thamCua = (blob) => (blob.kdf === 'argon2id'
 export async function danKhoa(matKhau, tham) {
   const th = tham.ct ? thamCua(tham) : tham;
   if (th.kdf === 'argon2id') {
-    const hw = await napArgon();
-    const raw = await hw.argon2id({
-      password: matKhau, salt: unb64(th.salt), parallelism: th.p, iterations: th.t,
-      memorySize: th.m, hashLength: 32, outputType: 'binary',
-    });
+    let raw;
+    try { raw = await argonTrongWorker(matKhau, th); } catch {
+      // Trình duyệt không cho Worker → tính ngay trên trang (vẫn đúng, chỉ khựng ~1 s)
+      const hw = await napArgon();
+      raw = await hw.argon2id({
+        password: matKhau, salt: unb64(th.salt), parallelism: th.p, iterations: th.t,
+        memorySize: th.m, hashLength: 32, outputType: 'binary',
+      });
+    }
     return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']);
   }
   const goc = await crypto.subtle.importKey('raw', enc.encode(matKhau), 'PBKDF2', false, ['deriveKey']);

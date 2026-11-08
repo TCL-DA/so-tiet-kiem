@@ -504,6 +504,7 @@ kbd { font: 500 12px var(--f-ui); padding: 3px 7px; border-radius: 4px; border: 
 .o-khoa svg { width: 24px; height: 24px; }
 .fx:not(.no-khoa-lac) .o-khoa.lac { animation: lac .5s; }
 @keyframes lac { 20% { transform: rotate(-14deg); } 40% { transform: rotate(12deg); } 60% { transform: rotate(-8deg); } 80% { transform: rotate(5deg); } }
+.khoa.dang-thu .o-khoa { animation: tho .9s ease-in-out infinite; }
 .fx:not(.no-khoa-mo) .khoa.dang-mo { animation: khoa-mo .55s var(--ease-in) forwards; }
 @keyframes khoa-mo { to { opacity: 0; transform: scale(1.06); } }
 .mat-khau { position: relative; }
