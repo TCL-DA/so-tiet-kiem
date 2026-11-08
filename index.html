@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="vi" class="fx">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sổ tiết kiệm</title>
+<meta name="description" content="Sổ tiết kiệm cá nhân: ghi gửi / rút, thống kê, biểu đồ, vàng quy ra tiền theo giá thị trường. Dữ liệu mã hoá trên máy.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Tiết kiệm">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Anton&family=Dancing+Script:wght@500&display=swap">
+<link rel="stylesheet" href="css/app.css">
+<script>
+  // Gắn .js ngay dòng đầu: hiệu ứng "hiện dần" chỉ giấu nội dung khi JS chạy được.
+  (function () { var r = document.documentElement; r.classList.add('js');
+    try { var c = JSON.parse(localStorage.getItem('stk.fx') || '{}'); if (c.bat === false) r.classList.remove('fx');
+      (c.tat || []).forEach(function (id) { r.classList.add('no-' + id); }); } catch (e) {} })();
+</script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M9.9 4.2A10.4 10.4 0 0 1 12 4c6.5 0 10 8 10 8a17.6 17.6 0 0 1-2.4 3.4M6.6 6.6C3.9 8.4 2 12 2 12s3.5 8 10 8a9.7 9.7 0 0 0 5.4-1.6M14.1 14.1a3 3 0 1 1-4.2-4.2M2 2l20 20"/></symbol>
+  <symbol id="i-cai-dat" viewBox="0 0 24 24"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></symbol>
+  <symbol id="i-khoa" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-tai-lai" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/></symbol>
+  <symbol id="i-may" viewBox="0 0 24 24"><path d="M17.5 19H8a6 6 0 1 1 5.7-8h.8a4.5 4.5 0 0 1 3 8z"/></symbol>
+  <symbol id="i-tai-ve" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
+  <symbol id="i-tai-len" viewBox="0 0 24 24"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></symbol>
+  <symbol id="i-xoa" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-tim" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-xuong" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-len" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+  <symbol id="i-ha" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></symbol>
+  <symbol id="i-vang" viewBox="0 0 24 24"><circle cx="8" cy="8" r="6"/><path d="M18.1 10.4A6 6 0 1 1 10.3 18"/><path d="M7 6h1v4"/></symbol>
+  <symbol id="i-nguoi" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></symbol>
+  <symbol id="i-bieu-do" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-5 4 3 5-7"/></symbol>
+  <symbol id="i-ds" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+  <symbol id="i-nha" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-vi" viewBox="0 0 24 24"><path d="M20 7V5a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3v3a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2V6"/></symbol>
+  <symbol id="i-dich" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+  <symbol id="i-chep" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/></symbol>
+  <symbol id="i-hoan-tac" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-phim" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M8 13h.01M12 13h.01M16 13h.01M7 16h10"/></symbol>
+  <symbol id="i-lich" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-tang" viewBox="0 0 24 24"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></symbol>
+  <symbol id="i-giam" viewBox="0 0 24 24"><path d="m22 17-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/></symbol>
+  <symbol id="i-sua" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="i-sao" viewBox="0 0 24 24"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></symbol>
+</svg>
+
+<a class="skip" href="#noi-dung">Bỏ qua, tới nội dung</a>
+<canvas id="troi" aria-hidden="true"></canvas>
+
+<!-- ═════════ Màn khoá ═════════ -->
+<div class="khoa" id="khoa" role="dialog" aria-modal="true" aria-labelledby="khoa-tieu-de">
+  <div class="khoa__hop">
+    <div class="khoa__ten">
+      <div class="o-khoa" id="o-khoa"><svg class="i"><use href="#i-khoa"/></svg></div>
+      <h1 id="khoa-tieu-de">Sổ tiết <span class="cursive">kiệm</span></h1>
+      <p id="khoa-mo-ta">Đang mở…</p>
+    </div>
+    <form class="card" id="form-khoa" autocomplete="off" novalidate>
+      <div class="truong" style="margin-bottom:14px">
+        <label for="mk">Mật khẩu</label>
+        <div class="mat-khau">
+          <input class="inp" id="mk" type="password" autocomplete="current-password" required>
+          <button type="button" data-hien-mk="mk" aria-label="Hiện mật khẩu"><svg class="i"><use href="#i-eye"/></svg></button>
+        </div>
+      </div>
+      <div class="truong" id="truong-mk2" hidden style="margin-bottom:14px">
+        <label for="mk2">Gõ lại mật khẩu</label>
+        <div class="mat-khau">
+          <input class="inp" id="mk2" type="password" autocomplete="new-password">
+          <button type="button" data-hien-mk="mk2" aria-label="Hiện mật khẩu"><svg class="i"><use href="#i-eye"/></svg></button>
+        </div>
+        <div class="do-manh" id="do-manh" data-d="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <p class="card__sub" id="goi-y-mk">Ít nhất 8 ký tự. Quên mật khẩu là KHÔNG mở lại được — nhớ giữ file Excel gốc / file sao lưu.</p>
+      </div>
+      <label class="o-tick"><input type="checkbox" id="nho-may" checked> Nhớ trên máy này 30 ngày</label>
+      <p class="loi-chu" id="loi-khoa" role="alert"></p>
+      <button class="btn btn--dac" type="submit" id="nut-khoa" style="width:100%;margin-top:6px">Mở sổ</button>
+    </form>
+    <div class="khoa__phu" id="khoa-phu"></div>
+  </div>
+</div>
+
+<!-- ═════════ Thanh trên ═════════ -->
+<header class="nav" id="nav">
+  <a class="nav__brand" href="#tong-quan">Sổ <span class="cursive">tiết kiệm</span></a>
+  <nav class="nav__links" aria-label="Các mục">
+    <a href="#tong-quan">Tổng quan</a>
+    <a href="#bieu-do">Biểu đồ</a>
+    <a href="#vang">Vàng</a>
+    <a href="#cho-muon">Cho mượn</a>
+    <a href="#giao-dich">Giao dịch</a>
+  </nav>
+  <div class="nav__act">
+    <span class="dong-bo" id="dong-bo" title="Đồng bộ GitHub"><svg class="i"><use href="#i-may"/></svg><span>Chỉ trên máy này</span></span>
+    <button class="btn btn--icon" id="btn-an-so" aria-pressed="false" aria-label="Ẩn số tiền (H)" title="Ẩn số tiền (H)"><svg class="i"><use href="#i-eye"/></svg></button>
+    <button class="btn btn--icon" id="btn-khoa" aria-label="Khoá sổ (L)" title="Khoá sổ (L)"><svg class="i"><use href="#i-khoa"/></svg></button>
+    <button class="btn btn--icon" id="btn-cai-dat" aria-label="Cài đặt" title="Cài đặt"><svg class="i"><use href="#i-cai-dat"/></svg></button>
+    <button class="btn nav__them nam-cham" data-them aria-keyshortcuts="N"><svg class="i"><use href="#i-plus"/></svg>Thêm giao dịch</button>
+  </div>
+</header>
+
+<main id="noi-dung" tabindex="-1">
+  <!-- ═════════ Tổng quan ═════════ -->
+  <section class="hero" id="tong-quan" aria-labelledby="tieu-de-chinh">
+    <p class="hero__eyebrow" id="hero-moc">Sổ tiết kiệm</p>
+    <h1 class="hero__title" id="tieu-de-chinh"><span class="w" style="--i:0">Tài</span> <span class="w" style="--i:1">sản</span> <span class="w" style="--i:2">của</span> <span class="cursive">mình</span></h1>
+    <div class="hero__total"><span class="odo money" id="tong">0</span><span class="dv">đ</span></div>
+    <p class="hero__chu" id="bang-chu"></p>
+    <div class="hero__tach" id="hero-tach"></div>
+    <div class="hero__muc-tieu" id="muc-tieu"></div>
+    <div class="hero__act">
+      <button class="btn nam-cham" data-them><svg class="i"><use href="#i-plus"/></svg>Thêm giao dịch</button>
+      <a class="btn" href="#giao-dich" style="text-decoration:none"><svg class="i"><use href="#i-ds"/></svg>Xem sổ</a>
+    </div>
+    <a class="hero__cuon" href="#chi-so" aria-label="Cuộn xuống">Cuộn<svg class="i"><use href="#i-xuong"/></svg></a>
+  </section>
+
+  <section class="sec" id="chi-so" aria-label="Chỉ số">
+    <div class="wrap"><div class="o-grid" id="o-grid"></div></div>
+  </section>
+
+  <!-- ═════════ Biểu đồ ═════════ -->
+  <section class="sec" id="bieu-do" aria-labelledby="h-bieu-do">
+    <div class="wrap">
+      <div class="sec__head rv">
+        <div>
+          <p class="sec__eyebrow">Thống kê</p>
+          <h2 class="sec__title" id="h-bieu-do">Tiền đi <span class="cursive">đâu</span>, về đâu</h2>
+          <p class="sec__note">Bấm vào một cột tháng, một nhóm hay một ô lịch để xem đúng các giao dịch đó trong sổ.</p>
+        </div>
+        <div class="pills pills--toi" role="group" aria-label="Khoảng thời gian" id="khoang">
+          <button class="pill" data-k="6" aria-pressed="false">6 tháng</button>
+          <button class="pill" data-k="12" aria-pressed="true">12 tháng</button>
+          <button class="pill" data-k="0" aria-pressed="false">Tất cả</button>
+        </div>
+      </div>
+      <div class="bd-grid">
+        <article class="card bd-rong rv">
+          <div class="card__head">
+            <div><h3 class="card__title">Số dư theo thời gian</h3><p class="card__sub" id="sub-sodu"></p></div>
+            <div class="chu-giai" id="cg-sodu">
+              <button aria-pressed="true" data-ds="0"><span class="mau-o" style="background:#2b7fff"></span>Tiền trong sổ</button>
+              <button aria-pressed="true" data-ds="1"><span class="mau-o net-dut"></span>Sổ + tiền cho mượn</button>
+            </div>
+          </div>
+          <div class="bd-khung"><canvas id="c-sodu" role="img" aria-label="Biểu đồ số dư theo thời gian"></canvas></div>
+        </article>
+        <article class="card bd-rong rv">
+          <div class="card__head">
+            <div><h3 class="card__title">Gửi vào – rút ra theo tháng</h3><p class="card__sub" id="sub-thang"></p></div>
+            <div class="chu-giai" id="cg-thang">
+              <button aria-pressed="true" data-ds="0"><span class="mau-o" style="background:#2b7fff"></span>Gửi vào</button>
+              <button aria-pressed="true" data-ds="1"><span class="mau-o" style="background:#1b1b1b"></span>Rút ra</button>
+              <button aria-pressed="true" data-ds="2"><span class="mau-o net-dut"></span>Dư ròng</button>
+            </div>
+          </div>
+          <div class="bd-khung"><canvas id="c-thang" role="img" aria-label="Biểu đồ gửi vào và rút ra theo tháng"></canvas></div>
+        </article>
+        <article class="card rv" style="--i:1">
+          <div class="card__head"><div><h3 class="card__title">Rút ra theo nhóm</h3><p class="card__sub" id="sub-nhom">Bấm một nhóm để lọc sổ</p></div></div>
+          <div class="thanh-ds" id="ds-nhom"></div>
+        </article>
+        <article class="card rv" style="--i:2">
+          <div class="card__head"><div><h3 class="card__title">10 khoản rút lớn nhất</h3><p class="card__sub">Bấm để mở / sửa</p></div></div>
+          <div class="thanh-ds" id="ds-lon"></div>
+        </article>
+        <article class="card rv" style="--i:1">
+          <div class="card__head"><div><h3 class="card__title">So sánh theo năm</h3><p class="card__sub" id="sub-nam"></p></div></div>
+          <div class="bd-khung"><canvas id="c-nam" role="img" aria-label="Biểu đồ so sánh theo năm"></canvas></div>
+        </article>
+        <article class="card rv" style="--i:2">
+          <div class="card__head"><div><h3 class="card__title">Lịch giao dịch 12 tháng</h3><p class="card__sub">Mỗi ô một ngày · xanh = vào nhiều hơn ra · đen = ra nhiều hơn vào</p></div></div>
+          <div class="lich-cuon"><div class="lich" id="lich"></div></div>
+          <div class="lich-chu" aria-hidden="true">Ra nhiều <i style="background:#1b1b1b"></i><i style="background:rgba(27,27,27,.42)"></i><i style="background:rgba(0,0,0,.07)"></i><i style="background:rgba(43,127,255,.55)"></i><i style="background:#1f63d6"></i> Vào nhiều</div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ Vàng ═════════ -->
+  <section class="sec" id="vang" aria-labelledby="h-vang">
+    <div class="wrap">
+      <div class="sec__head rv">
+        <div>
+          <p class="sec__eyebrow">Vàng quy ra tiền</p>
+          <h2 class="sec__title" id="h-vang">Vàng <span class="cursive">giữ giá</span></h2>
+          <p class="sec__note">Giá lấy trực tiếp từ vang.today (giá SJC, DOJI, PNJ, Bảo Tín) — hỏng thì sang PNJ, rồi SJC. Tính theo giá <b>tiệm mua vào</b> — số tiền thật sự nhận được nếu bán.</p>
+        </div>
+      </div>
+      <div class="vang-grid">
+        <article class="card rv nghieng" id="the-gia"></article>
+        <article class="card rv" style="--i:1" id="the-vang"></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ Cho mượn ═════════ -->
+  <section class="sec" id="cho-muon" aria-labelledby="h-no">
+    <div class="wrap">
+      <div class="sec__head rv">
+        <div>
+          <p class="sec__eyebrow">Sổ nợ</p>
+          <h2 class="sec__title" id="h-no">Ai đang <span class="cursive">giữ</span> tiền mình</h2>
+          <p class="sec__note" id="no-ghi-chu"></p>
+        </div>
+        <label class="cong-tac"><input type="checkbox" id="tinh-no"> Tính tiền cho mượn vào tổng tài sản</label>
+      </div>
+      <div class="no-grid" id="no-grid"></div>
+    </div>
+  </section>
+
+  <!-- ═════════ Giao dịch ═════════ -->
+  <section class="sec" id="giao-dich" aria-labelledby="h-gd">
+    <div class="wrap">
+      <div class="sec__head rv">
+        <div>
+          <p class="sec__eyebrow">Sổ ghi</p>
+          <h2 class="sec__title" id="h-gd">Từng <span class="cursive">đồng</span> một</h2>
+        </div>
+        <div class="hang-nut">
+          <button class="btn" data-them><svg class="i"><use href="#i-plus"/></svg>Thêm</button>
+        </div>
+      </div>
+      <div class="card rv">
+        <div class="cong-cu">
+          <div class="tim"><svg class="i"><use href="#i-tim"/></svg><label class="sr" for="loc-chu">Tìm</label>
+            <input class="inp" id="loc-chu" type="search" placeholder="Tìm ghi chú, nhóm, người, số tiền… ( / )" aria-keyshortcuts="/"></div>
+          <div class="chon" style="flex:0 1 220px"><label class="sr" for="loc-nhom">Nhóm</label><select class="inp" id="loc-nhom"></select></div>
+          <div class="loc-ngay"><label for="loc-tu">Từ</label><input class="inp" type="date" id="loc-tu"><label for="loc-den">đến</label><input class="inp" type="date" id="loc-den"></div>
+        </div>
+        <div class="pills co-bong" role="group" aria-label="Kiểu giao dịch" id="loc-kieu">
+          <span class="bong" aria-hidden="true"></span>
+          <button class="pill" data-k="" aria-pressed="true">Tất cả</button>
+          <button class="pill" data-k="vao" aria-pressed="false">Gửi vào</button>
+          <button class="pill" data-k="ra" aria-pressed="false">Rút ra</button>
+          <button class="pill" data-k="muon" aria-pressed="false">Cho mượn</button>
+          <button class="pill" data-k="tra" aria-pressed="false">Được trả</button>
+        </div>
+        <div class="tom-loc" id="tom-loc" aria-live="polite"></div>
+        <div class="bang-cuon">
+          <table class="gd" id="bang">
+            <thead><tr>
+              <th scope="col" data-cot="ngay"><button>Ngày<svg class="i mt"><use href="#i-xuong"/></svg></button></th>
+              <th scope="col" data-cot="ghiChu"><button>Ghi chú<svg class="i mt"><use href="#i-xuong"/></svg></button></th>
+              <th scope="col" data-cot="nhom"><button>Nhóm<svg class="i mt"><use href="#i-xuong"/></svg></button></th>
+              <th scope="col" class="so" data-cot="vao"><button>Vào<svg class="i mt"><use href="#i-xuong"/></svg></button></th>
+              <th scope="col" class="so" data-cot="ra"><button>Ra<svg class="i mt"><use href="#i-xuong"/></svg></button></th>
+              <th scope="col" class="so" data-cot="du"><button>Số dư sổ<svg class="i mt"><use href="#i-xuong"/></svg></button></th>
+              <th scope="col"><span class="sr">Xoá</span></th>
+            </tr></thead>
+            <tbody id="than-bang"></tbody>
+          </table>
+        </div>
+        <div class="xem-them" id="xem-them"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="chan">
+    <p id="chan-tom"></p>
+    <p>Dữ liệu mã hoá AES-256 bằng mật khẩu của bạn, chỉ nằm trên máy này<span id="chan-dong-bo"></span>. Phím tắt: <kbd>N</kbd> thêm · <kbd>/</kbd> tìm · <kbd>H</kbd> ẩn số · <kbd>?</kbd> tất cả.</p>
+  </footer>
+</main>
+
+<nav class="tabbar" aria-label="Điều hướng nhanh">
+  <a href="#tong-quan"><svg class="i"><use href="#i-nha"/></svg>Tổng quan</a>
+  <a href="#bieu-do"><svg class="i"><use href="#i-bieu-do"/></svg>Biểu đồ</a>
+  <button class="tab-them" data-them aria-label="Thêm giao dịch"><svg class="i"><use href="#i-plus"/></svg>Thêm</button>
+  <a href="#vang"><svg class="i"><use href="#i-vang"/></svg>Vàng · nợ</a>
+  <a href="#giao-dich"><svg class="i"><use href="#i-ds"/></svg>Sổ ghi</a>
+</nav>
+
+<!-- ═════════ Ngăn nhập giao dịch ═════════ -->
+<div class="man" id="man"></div>
+<aside class="ngan" id="ngan-gd" role="dialog" aria-modal="true" aria-labelledby="ngan-gd-tieu-de" hidden>
+  <form id="form-gd" novalidate style="display:contents">
+    <div class="ngan__dau"><h2 id="ngan-gd-tieu-de">Thêm giao dịch</h2><button type="button" class="btn btn--ink btn--icon" data-dong aria-label="Đóng"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="ngan__than">
+      <div class="kieu-4" role="radiogroup" aria-label="Kiểu giao dịch" id="kieu-4">
+        <span class="bong" aria-hidden="true"></span>
+        <button type="button" role="radio" data-k="vao" aria-checked="true">Gửi vào</button>
+        <button type="button" role="radio" data-k="ra" aria-checked="false">Rút ra</button>
+        <button type="button" role="radio" data-k="muon" aria-checked="false">Cho mượn</button>
+        <button type="button" role="radio" data-k="tra" aria-checked="false">Được trả</button>
+      </div>
+      <div class="truong">
+        <label for="gd-tien">Số tiền (gõ được 5tr · 1tr5 · 500k · 5 xị)</label>
+        <input class="inp inp--tien num" id="gd-tien" inputmode="decimal" autocomplete="off" required aria-describedby="gd-tien-chu gd-tien-loi">
+        <div class="tien-chu" id="gd-tien-chu"></div>
+        <div class="loi-chu" id="gd-tien-loi" role="alert"></div>
+        <div class="chips" id="chips-tien">
+          <button type="button" class="chip" data-cong="500000">+500k</button>
+          <button type="button" class="chip" data-cong="1000000">+1 tr</button>
+          <button type="button" class="chip" data-cong="2000000">+2 tr</button>
+          <button type="button" class="chip" data-cong="5000000">+5 tr</button>
+          <button type="button" class="chip" data-cong="10000000">+10 tr</button>
+          <button type="button" class="chip" data-cong="0">Xoá số</button>
+        </div>
+      </div>
+      <div class="hai-cot">
+        <div class="truong"><label for="gd-ngay">Ngày</label><input class="inp" type="date" id="gd-ngay" required></div>
+        <div class="truong"><label for="gd-nhom">Nhóm</label><div class="chon"><select class="inp" id="gd-nhom"></select></div></div>
+      </div>
+      <div class="truong"><label for="gd-ghi">Ghi chú</label><input class="inp" id="gd-ghi" list="ds-ghi-chu" autocomplete="off" placeholder="vd: Lương tháng 11, Rút mua đồ…"><datalist id="ds-ghi-chu"></datalist></div>
+      <div class="truong" id="truong-nguoi" hidden>
+        <label for="gd-nguoi">Người</label><input class="inp" id="gd-nguoi" list="ds-nguoi" autocomplete="off"><datalist id="ds-nguoi"></datalist>
+        <div class="loi-chu" id="gd-nguoi-loi" role="alert"></div>
+        <label class="o-tick" id="o-ngoai-so"><input type="checkbox" id="gd-ngoai-so"> Tiền ngoài, không lấy từ sổ (chỉ ghi để nhớ người ta nợ)</label>
+      </div>
+      <p class="card__sub" id="gd-nguon"></p>
+    </div>
+    <div class="ngan__chan">
+      <div class="trai">
+        <button type="button" class="btn btn--nguy btn--icon" id="gd-xoa" aria-label="Xoá giao dịch này" hidden><svg class="i"><use href="#i-xoa"/></svg></button>
+        <button type="button" class="btn btn--ink btn--icon" id="gd-chep" aria-label="Nhân bản giao dịch này" title="Nhân bản" hidden><svg class="i"><use href="#i-chep"/></svg></button>
+      </div>
+      <button type="button" class="btn btn--ink" id="gd-luu-tiep">Lưu &amp; thêm tiếp</button>
+      <button type="submit" class="btn btn--dac" id="gd-luu">Lưu</button>
+    </div>
+  </form>
+</aside>
+
+<!-- ═════════ Hộp chung (cài đặt / nhập file / vàng / mật khẩu) ═════════ -->
+<aside class="ngan ngan--giua" id="hop" role="dialog" aria-modal="true" aria-labelledby="hop-tieu-de" hidden>
+  <div class="ngan__dau"><h2 id="hop-tieu-de">Cài đặt</h2><button type="button" class="btn btn--ink btn--icon" data-dong aria-label="Đóng"><svg class="i"><use href="#i-x"/></svg></button></div>
+  <div class="ngan__than" id="hop-than"></div>
+  <div class="ngan__chan" id="hop-chan"></div>
+</aside>
+
+<input type="file" id="chon-file" accept=".xlsx,.xls,.json" hidden>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<canvas id="lop-fx" aria-hidden="true"></canvas>
+<div class="con-tro-vong" aria-hidden="true"></div>
+<div class="goi-y-phim" aria-hidden="true"></div>
+
+<script src="lib/chart.umd.min.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
