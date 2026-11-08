@@ -74,7 +74,8 @@
       <div class="truong" style="margin-bottom:14px">
         <label for="mk">Mật khẩu</label>
         <div class="mat-khau">
-          <input class="inp" id="mk" type="password" autocomplete="current-password" required>
+          <input class="inp" id="mk" type="password" autocomplete="current-password" inputmode="numeric" required>
+          <button type="button" class="nut-ban-phim" id="ban-phim" aria-label="Đổi sang bàn phím chữ">ABC</button>
           <button type="button" data-hien-mk="mk" aria-label="Hiện mật khẩu"><svg class="i"><use href="#i-eye"/></svg></button>
         </div>
       </div>
@@ -241,7 +242,7 @@
           <div class="tim"><svg class="i"><use href="#i-tim"/></svg><label class="sr" for="loc-chu">Tìm</label>
             <input class="inp" id="loc-chu" type="search" placeholder="Tìm ghi chú, nhóm, người, số tiền… ( / )" aria-keyshortcuts="/"></div>
           <div class="chon" style="flex:0 1 220px"><label class="sr" for="loc-nhom">Nhóm</label><select class="inp" id="loc-nhom"></select></div>
-          <div class="loc-ngay"><label for="loc-tu">Từ</label><input class="inp" type="date" id="loc-tu"><label for="loc-den">đến</label><input class="inp" type="date" id="loc-den"></div>
+          <div class="loc-ngay"><label for="loc-tu">Từ ngày</label><input class="inp" type="date" id="loc-tu" title="Từ ngày"><label for="loc-den">đến ngày</label><input class="inp" type="date" id="loc-den" title="Đến ngày"></div>
         </div>
         <div class="pills co-bong" role="group" aria-label="Kiểu giao dịch" id="loc-kieu">
           <span class="bong" aria-hidden="true"></span>
@@ -273,7 +274,7 @@
 
   <footer class="chan">
     <p id="chan-tom"></p>
-    <p>Dữ liệu mã hoá AES-256 (khoá Argon2id dẫn từ mật khẩu).<span id="chan-dong-bo"></span> Phím tắt: <kbd>N</kbd> thêm · <kbd>/</kbd> tìm · <kbd>H</kbd> ẩn số · <kbd>?</kbd> tất cả.</p>
+    <p>Dữ liệu mã hoá AES-256 (khoá Argon2id dẫn từ mật khẩu).<span id="chan-dong-bo"></span> <span class="phim-chan">Phím tắt: <kbd>N</kbd> thêm · <kbd>/</kbd> tìm · <kbd>H</kbd> ẩn số · <kbd>?</kbd> tất cả.</span></p>
   </footer>
 </main>
 

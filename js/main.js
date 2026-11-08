@@ -266,6 +266,15 @@ K.form.addEventListener('submit', async (e) => {
   } finally { K.nut.disabled = false; K.nut.textContent = chuNut(); }
 });
 K.mk.addEventListener('input', () => { if (cheDoKhoa === 'tao') $('#do-manh').dataset.d = V.doManh(K.mk.value); });
+// Bàn phím số / chữ cho ô mật khẩu trên điện thoại (nhớ lựa chọn)
+function datBanPhim(so) {
+  K.mk.inputMode = so ? 'numeric' : 'text';
+  $('#ban-phim').textContent = so ? 'ABC' : '123';
+  $('#ban-phim').setAttribute('aria-label', so ? 'Đổi sang bàn phím chữ' : 'Đổi sang bàn phím số');
+  try { localStorage.setItem('stk.banPhim', so ? 'so' : 'chu'); } catch { /* bỏ qua */ }
+}
+try { datBanPhim(localStorage.getItem('stk.banPhim') !== 'chu'); } catch { datBanPhim(true); }
+$('#ban-phim').addEventListener('click', () => { datBanPhim(K.mk.inputMode !== 'numeric'); K.mk.blur(); setTimeout(() => K.mk.focus(), 50); });
 K.phu.addEventListener('click', async (e) => {
   if (e.target.id === 'khoa-quen') {
     K.mota.textContent = banWeb
@@ -368,6 +377,7 @@ document.addEventListener('click', (e) => {
   if (t.closest('[data-muc-tieu]')) { moMucTieu(); return; }
   if (t.closest('#bo-loc')) { UI.datLoc({ chu: '', nhom: '', kieu: '', tu: '', den: '' }); return; }
   if (t.closest('#nut-xem-them')) { app.gioiHan += 150; UI.veBang(); return; }
+  if (t.closest('[data-mo-nhom]')) { app.moNhom = !app.moNhom; UI.veNhomDs(); return; }
   if (t.closest('#vang-tai')) { capNhatGiaVang(true); return; }
   if (t.closest('#vang-them')) { moVang(); return; }
   const v = t.closest('[data-vang]'); if (v) { moVang(app.st.vang.find((x) => x.id === v.dataset.vang)); return; }
@@ -561,5 +571,10 @@ async function khoiDong() {
 }
 khoiDong().catch((e) => { console.error(e); hienKhoa(coSo() ? 'mo' : 'tao', `Lỗi khởi động: ${e.message}`); });
 
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  const coTruoc = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
+  // Bản web mới vừa nhận quyền: đang ở màn khoá thì tải lại luôn cho chắc chạy bản mới
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (coTruoc && !K.el.hidden) location.reload(); });
+}
 window.addEventListener('storage', (e) => { if (e.key === 'stk.fx') { apFx(); capNhatTroi(); } });

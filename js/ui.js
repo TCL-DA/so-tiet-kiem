@@ -111,11 +111,7 @@ export function veBieuDo(epBuoc = false) {
   const namCuoi = k.nam[k.nam.length - 1];
   $('#sub-nam').innerHTML = namCuoi ? `Năm ${namCuoi.k}: dư <b class="money">${tienDau(namCuoi.vao - namCuoi.ra)}</b>` : '';
 
-  const maxN = k.nhom[0]?.v || 1, tongRa = k.nhom.reduce((s, x) => s + x.v, 0) || 1;
-  $('#ds-nhom').innerHTML = k.nhom.map((n, i) => `<button class="thanh" style="--i:${i}" data-nhom="${n.id}">
-    <span class="thanh__ten">${esc(n.ten)}</span><span class="thanh__so num money">${tienD(n.v)}</span>
-    <span class="thanh__ray"><i style="--p:${n.v / maxN}"></i></span>
-    <span class="thanh__phu">${Math.round((n.v / tongRa) * 1000) / 10}% tổng rút</span></button>`).join('');
+  veNhomDs();
   const top = k.ruiLon.slice(0, 10), maxL = top[0]?.soTien || 1;
   $('#ds-lon').innerHTML = top.map((t, i) => `<button class="thanh" style="--i:${i}" data-mo="${t.id}">
     <span class="thanh__ten">${esc(t.ghiChu || tenNhom(t.nhom))}</span><span class="thanh__so num money">${tienD(t.soTien)}</span>
@@ -125,6 +121,19 @@ export function veBieuDo(epBuoc = false) {
   theoDoiHien(sec);
 }
 export const datLaiBieuDo = () => { bdDaVe = false; };
+
+/** Danh sách "Rút ra theo nhóm": mặc định 8 nhóm lớn nhất (cao ngang thẻ bên cạnh), bấm để xem hết. */
+const SO_NHOM_GON = 8;
+export function veNhomDs() {
+  const k = app.kq;
+  const maxN = k.nhom[0]?.v || 1, tongRa = k.nhom.reduce((s, x) => s + x.v, 0) || 1;
+  const hien = app.moNhom ? k.nhom : k.nhom.slice(0, SO_NHOM_GON);
+  $('#ds-nhom').innerHTML = hien.map((n, i) => `<button class="thanh" style="--i:${i}" data-nhom="${n.id}">
+    <span class="thanh__ten">${esc(n.ten)}</span><span class="thanh__so num money">${tienD(n.v)}</span>
+    <span class="thanh__ray"><i style="--p:${n.v / maxN}"></i></span>
+    <span class="thanh__phu">${Math.round((n.v / tongRa) * 1000) / 10}% tổng rút</span></button>`).join('')
+    + (k.nhom.length > SO_NHOM_GON ? `<button class="btn btn--ink btn--nho" data-mo-nhom style="align-self:flex-start;margin-top:8px">${app.moNhom ? 'Thu gọn' : `Xem cả ${k.nhom.length} nhóm`}</button>` : '');
+}
 
 function locThang(thang) {
   const [y, m] = thang.split('-').map(Number);
@@ -163,10 +172,10 @@ export function veVang(dangTai = false, loiTai = '') {
       <tbody>${hang('nhan', 'Nhẫn 999,9')}${hang('mieng', 'Miếng SJC')}${hang('nutrang', 'Nữ trang 999,9')}</tbody></table>
     <div class="hang-chon">
       <div class="truong"><label for="vang-nguon">Nguồn giá</label><div class="chon"><select class="inp" id="vang-nguon">${Object.entries(TEN_NGUON).map(([k2, v]) => `<option value="${k2}" ${gv.nguon === k2 ? 'selected' : ''}>${v}</option>`).join('')}</select></div></div>
-      <div class="truong"><label for="vang-coso">Quy tiền theo</label><div class="chon"><select class="inp" id="vang-coso"><option value="mua" ${gv.coSo !== 'ban' ? 'selected' : ''}>Giá tiệm mua vào</option><option value="ban" ${gv.coSo === 'ban' ? 'selected' : ''}>Giá tiệm bán ra</option></select></div></div>
-      <div class="truong"><label for="vang-tay">Giá tay / chỉ (trống = tự động)</label><input class="inp num" id="vang-tay" inputmode="decimal" value="${gv.thuCong > 0 ? fmt(gv.thuCong) : ''}" placeholder="vd 13tr6"></div>
+      <div class="truong"><label for="vang-coso">Quy tiền theo</label><div class="chon"><select class="inp" id="vang-coso"><option value="mua" ${gv.coSo !== 'ban' ? 'selected' : ''}>Tiệm mua vào</option><option value="ban" ${gv.coSo === 'ban' ? 'selected' : ''}>Tiệm bán ra</option></select></div></div>
+      <div class="truong rong"><label for="vang-tay">Giá tay / chỉ (trống = tự động)</label><input class="inp num" id="vang-tay" inputmode="decimal" value="${gv.thuCong > 0 ? fmt(gv.thuCong) : ''}" placeholder="vd 13tr6"></div>
     </div>
-    <div class="bd-khung" style="height:160px;margin-top:14px" id="khung-gia-vang">${ls.length < 2 ? '<p class="trong" style="padding:24px 8px">Biểu đồ giá sẽ hiện sau khi web ghi được giá từ 2 ngày trở lên (mỗi lần mở web ghi 1 điểm / ngày).</p>' : '<canvas id="c-vang" role="img" aria-label="Giá vàng theo ngày"></canvas>'}</div>`;
+    <div class="bd-khung" style="height:${ls.length < 2 ? 'auto' : '160px'};margin-top:14px" id="khung-gia-vang">${ls.length < 2 ? '<p class="trong" style="padding:14px 8px 4px;font-size:13px">Biểu đồ giá sẽ hiện sau khi web ghi được giá từ 2 ngày trở lên (mỗi lần mở web ghi 1 điểm / ngày).</p>' : '<canvas id="c-vang" role="img" aria-label="Giá vàng theo ngày"></canvas>'}</div>`;
   if (ls.length >= 2) BD.veGiaVang($('#c-vang'), ls, loai);
 
   const ds = k.vang;
@@ -206,8 +215,8 @@ export function veNo() {
         <span>Đã trả ${Math.round(pt * 100)}%<br>Mượn <span class="money">${app.anSo ? '•••' : fmtShort(p.muon)}</span> · đã trả <span class="money">${app.anSo ? '•••' : fmtShort(p.tra)}</span></span></div>
       <div class="thanh__ray"><i style="--p:${pt};background:var(--twilight)"></i></div>
       <div class="no-the__nut">
-        ${p.con > 0 ? `<button class="btn btn--ink btn--nho" data-tra="${esc(p.ten)}" data-con="${p.con}">${svg('plus')}Ghi khoản trả</button>` : ''}
-        <button class="btn btn--ink btn--nho" data-xem-nguoi="${esc(p.ten)}">Xem giao dịch</button>
+        ${p.con > 0 ? `<button class="btn btn--ink btn--nho" data-tra="${esc(p.ten)}" data-con="${p.con}">${svg('plus')}Ghi trả</button>` : ''}
+        <button class="btn btn--ink btn--nho" data-xem-nguoi="${esc(p.ten)}">Xem sổ</button>
       </div></article>`;
   }).join('');
   theoDoiHien($('#no-grid'));

@@ -50,7 +50,7 @@ const tabDuLieu = () => `
     <div class="hang-nut"><button class="btn btn--ink" id="cd-xuat-x">${svg('tai-ve')}Excel</button><button class="btn btn--ink" id="cd-xuat-j">${svg('tai-ve')}Sao lưu JSON</button></div></div>
   <div class="the-cai-dat"><h3>Mục tiêu tiết kiệm</h3><p>Vòng tiến độ ở đầu trang; chạm mục tiêu thì bắn pháo giấy.</p>
     <div class="hang-nut"><input class="inp num" id="cd-muc-tieu" inputmode="decimal" style="max-width:240px" value="${fmt(app.st.caiDat.mucTieu || 0)}" aria-label="Mục tiêu (đồng)"><button class="btn btn--ink" id="cd-luu-muc">Lưu</button></div></div>
-  <div class="the-cai-dat"><h3>Xoá toàn bộ dữ liệu trên máy này</h3><p>Giữ nút 1,6 giây để xoá. Bản trên GitHub (nếu đã bật đồng bộ) vẫn còn.</p>
+  <div class="the-cai-dat"><h3>Xoá toàn bộ dữ liệu trên máy này</h3><p>Giữ nút 1,6 giây để xoá. Bản trên web (nếu có) vẫn còn — mở lại bằng mật khẩu là có.</p>
     <div class="hang-nut"><button class="btn btn--nguy hold" id="cd-xoa-het"><span class="vong-giu"></span>${svg('xoa')}Giữ để xoá hết</button></div></div>`;
 
 function ganDuLieu() {

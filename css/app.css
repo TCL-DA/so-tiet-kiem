@@ -34,6 +34,7 @@
   --z-nav: 40; --z-tab: 40; --z-scrim: 90; --z-sheet: 100; --z-toast: 120; --z-khoa: 200; --z-fx: 300;
 }
 @media (min-width: 768px) { :root { --gutter: 24px; --nav-h: 72px; } }
+@media (max-width: 600px) { :root { --card-pad: 16px; } }
 
 *, *::before, *::after { box-sizing: border-box; }
 html { overflow-x: clip; }
@@ -221,7 +222,8 @@ html:not(.fx) .vong .chay, .no-vong-muc-tieu .hero .vong .chay { transition: non
 @media (min-width: 900px) { .o-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; } }
 .o { min-height: 128px; display: flex; flex-direction: column; gap: 4px; transform-style: preserve-3d; }
 .o__nhan { font-size: 13px; color: var(--chu-sang-phu); display: flex; align-items: center; gap: 6px; }
-.o__so { font-size: clamp(20px, 2.6vw, 28px); line-height: 1.2; margin-top: auto; overflow-wrap: anywhere; }
+.o__so { font-size: clamp(20px, 2.6vw, 28px); line-height: 1.2; margin-top: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 600px) { .o { padding: 14px; min-height: 116px; } .o__so { font-size: clamp(16px, 4.6vw, 20px); } .o__phu, .o__nhan { font-size: 12px; } }
 .o__phu { font-size: 13px; color: var(--chu-sang-phu); }
 .o__phu b { font-weight: 500; color: var(--ink); }
 .len { color: var(--signal-dam); } .xuong { color: var(--ra); }
@@ -288,12 +290,13 @@ button.thanh:hover { background: var(--nen-sang-2); }
 .bang-gia { width: 100%; border-collapse: collapse; font-size: 14px; }
 .bang-gia th { text-align: left; font-weight: 500; color: var(--chu-sang-phu); font-size: 12px; padding: 6px 0; }
 .bang-gia td { padding: 8px 0; border-top: 1px solid var(--ke-sang); }
-.bang-gia td + td, .bang-gia th + th { text-align: right; }
+.bang-gia td + td, .bang-gia th + th { text-align: right; padding-left: 14px; white-space: nowrap; }
 .bang-gia tr.dang-dung td:first-child::after { content: ' · đang dùng'; color: var(--chu-sang-phu); font-size: 12px; }
 .cho-xuong { border-radius: 4px; background: var(--nen-sang-2); color: transparent !important; }
 .fx:not(.no-xuong-xuong) .cho-xuong { animation: tho 1.1s ease-in-out infinite; }
 @keyframes tho { 50% { opacity: .45; } }
-.hang-chon { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 14px; }
+.hang-chon { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.hang-chon .rong { grid-column: 1 / -1; }
 .vang-ds { display: flex; flex-direction: column; }
 .vang-dong { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 12px 0; border-top: 1px solid var(--ke-sang); align-items: center; }
 .vang-dong:first-child { border-top: 0; }
@@ -314,7 +317,8 @@ button.thanh:hover { background: var(--nen-sang-2); }
 .no-the__vong { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--chu-sang-phu); }
 .no-the__vong .vong { width: 44px; height: 44px; }
 .fx:not(.no-vong-tra-no) .no-the .vong .chay { transition: stroke-dashoffset 1.4s var(--ease) .2s; }
-.no-the__nut { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+.no-the__nut { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; margin-top: auto; }
+.no-the__nut .btn { width: 100%; }
 .cong-tac { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; color: var(--chu-toi-phu); cursor: pointer; min-height: 44px; }
 .cong-tac input { appearance: none; width: 40px; height: 24px; border-radius: var(--r-pill); background: rgba(255, 255, 255, .2); position: relative; cursor: pointer; transition: background-color .25s; flex: none; margin: 0; }
 .cong-tac input::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--white); transition: transform .25s var(--ease); }
@@ -354,7 +358,8 @@ html:not(.fx) .gd th .mt, .no-mui-ten-sap .gd th .mt { transition: none; }
 .gd tr.thang td { background: var(--haze); font-size: 12px; color: var(--chu-sang-phu); padding: 18px 0 6px; cursor: default; border-bottom: 1px solid var(--ke-sang); }
 .gd tr.thang b { color: var(--ink); font-weight: 500; font-size: 14px; margin-right: 10px; }
 .gd .ngay { white-space: nowrap; color: var(--chu-sang-phu); width: 84px; }
-.gd .ghi { min-width: 180px; }
+.gd .ghi { min-width: 180px; width: 38%; }
+.gd td.nhom-cot { width: 18%; }
 .gd .ghi .the { display: flex; gap: 4px; align-items: center; font-size: 12px; color: var(--chu-sang-phu); margin-top: 2px; flex-wrap: wrap; }
 .nhan-nho { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--ke-sang); color: var(--chu-sang-phu); white-space: nowrap; }
 .gd .ghi .the:empty { display: none; }
@@ -389,8 +394,13 @@ html:not(.fx) .gd th .mt, .no-mui-ten-sap .gd th .mt { transition: none; }
   .gd tr.dong .nut { grid-area: nut; align-self: center; }
   .gd tr.thang { display: block; }
   .gd tr.thang td { display: block; }
-  .loc-ngay input { width: auto; min-width: 0; flex: 1 1 0; }
+  .loc-ngay input { width: auto; min-width: 0; flex: 1 1 0; padding: 10px 8px; }
   .loc-ngay { flex: 1 1 100%; min-width: 0; }
+  .loc-ngay label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .loc-ngay::after { content: none; }
+  #loc-kieu { display: flex; width: 100%; }
+  #loc-kieu .pill { flex: 1 1 auto; padding: 6px 4px; font-size: 12.5px; }
+  .phim-chan { display: none; }
 }
 
 /* ───────────── Ô nhập ───────────── */
@@ -498,6 +508,9 @@ kbd { font: 500 12px var(--f-ui); padding: 3px 7px; border-radius: 4px; border: 
 @keyframes khoa-mo { to { opacity: 0; transform: scale(1.06); } }
 .mat-khau { position: relative; }
 .mat-khau .inp { padding-right: 52px; }
+#mk { padding-right: 100px; }
+.mat-khau .nut-ban-phim { right: 46px; width: 50px; font-size: 12px; font-weight: 500; color: var(--chu-sang-phu); }
+@media (hover: hover) and (pointer: fine) { .mat-khau .nut-ban-phim { display: none; } #mk { padding-right: 52px; } }
 .mat-khau button { position: absolute; right: 2px; top: 2px; bottom: 2px; width: 44px; display: grid; place-items: center; color: var(--chu-sang-phu); border-radius: var(--r-input); }
 .do-manh { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
 .do-manh i { height: 4px; border-radius: 2px; background: var(--ke-sang); transition: background-color .3s; }
