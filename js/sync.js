@@ -1,58 +1,77 @@
-// Đồng bộ qua GitHub: file đã MÃ HOÁ nằm trong repo RIÊNG TƯ (mặc định TCL-DA/so-tiet-kiem-du-lieu).
-// Mỗi máy dán token (fine-grained, chỉ quyền Contents của repo đó) một lần; token chỉ nằm trên máy đó.
+// Bản sổ trên web: file ĐÃ MÃ HOÁ `du-lieu.enc.json` nằm ngay trong repo của web.
+// Ai mở link + gõ đúng mật khẩu là xem được (đọc không cần tài khoản).
+// Máy nào muốn LƯU thay đổi lên web thì dán token GitHub một lần (chỉ quyền Contents của repo này).
 
 const LS = 'stk.dongbo';
 const API = 'https://api.github.com';
 export const FILE = 'du-lieu.enc.json';
+export const REPO_MAC_DINH = 'TCL-DA/so-tiet-kiem';
 
 export function docCauHinh() {
-  try { return { repo: 'TCL-DA/so-tiet-kiem-du-lieu', token: '', sha: '', lanCuoi: 0, ...JSON.parse(localStorage.getItem(LS) || '{}') }; }
-  catch { return { repo: 'TCL-DA/so-tiet-kiem-du-lieu', token: '', sha: '', lanCuoi: 0 }; }
+  let c = {};
+  try { c = JSON.parse(localStorage.getItem(LS) || '{}'); } catch { /* bỏ qua */ }
+  if (!c.repo || c.repo === 'TCL-DA/so-tiet-kiem-du-lieu') { c.repo = REPO_MAC_DINH; c.sha = ''; }
+  return { token: '', sha: '', lanCuoi: 0, ...c };
 }
 export function ghiCauHinh(c) { try { localStorage.setItem(LS, JSON.stringify(c)); } catch { /* bỏ qua */ } }
-export const coDongBo = () => !!docCauHinh().token;
+export const coQuyenDang = () => !!docCauHinh().token;
 
 const b64utf8 = (s) => btoa(unescape(encodeURIComponent(s)));
 const unb64utf8 = (s) => decodeURIComponent(escape(atob(s.replace(/\n/g, ''))));
 
-async function goi(cfg, path, opt = {}) {
-  const r = await fetch(`${API}/repos/${cfg.repo}/contents/${path}`, {
-    ...opt,
-    cache: 'no-store',
-    headers: { Authorization: `Bearer ${cfg.token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opt.headers || {}) },
-  });
-  if (r.status === 404) return { khongCo: true };
-  if (r.status === 401) throw new Error('Token sai hoặc đã hết hạn (401).');
-  if (r.status === 403) throw new Error('Token không có quyền ghi repo này (403). Cần quyền "Contents: Read and write".');
-  if (r.status === 409 || r.status === 422) return { xungDot: true };
-  if (!r.ok) throw new Error(`GitHub báo lỗi ${r.status}.`);
-  return r.json();
+async function layCoHanGio(url, opt = {}, ms = 8000) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms);
+  try { return await fetch(url, { ...opt, cache: 'no-store', signal: ctl.signal }); } finally { clearTimeout(t); }
 }
 
-/** Kéo bản mã hoá trên GitHub về. Trả {blob, sha} hoặc null nếu chưa có. */
+const tieuDe = (cfg) => ({
+  Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28',
+  ...(cfg.token ? { Authorization: `Bearer ${cfg.token}` } : {}),
+});
+
+/**
+ * Kéo bản trên web về. Trả {blob, sha} | null (chưa đăng gì).
+ * Không có token: đọc qua API công khai (mới nhất), API hết lượt thì đọc file trên chính trang web.
+ */
 export async function keo(cfg = docCauHinh()) {
-  const d = await goi(cfg, FILE);
-  if (d.khongCo) return null;
-  return { blob: JSON.parse(unb64utf8(d.content)), sha: d.sha };
+  try {
+    const r = await layCoHanGio(`${API}/repos/${cfg.repo}/contents/${FILE}`, { headers: tieuDe(cfg) });
+    if (r.status === 404 && cfg.token) return null;
+    if (r.status === 401) throw new Error('Token sai hoặc đã hết hạn (401).');
+    if (r.ok) { const d = await r.json(); return { blob: JSON.parse(unb64utf8(d.content)), sha: d.sha }; }
+    if (cfg.token) throw new Error(`GitHub báo lỗi ${r.status}.`);
+  } catch (e) {
+    if (cfg.token || /Token/.test(e.message)) throw e;
+  }
+  // Dự phòng: file tĩnh trên trang (chậm hơn tối đa ~10 phút do bộ đệm của GitHub Pages)
+  const r = await layCoHanGio(`${FILE}?t=${Date.now()}`);
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`Không tải được bản trên web (${r.status}).`);
+  return { blob: await r.json(), sha: '' };
 }
 
-/** Đẩy bản mã hoá lên. Trả sha mới; {xungDot:true} nếu trên GitHub vừa có bản mới hơn. */
+/** Đăng bản mã hoá lên. Trả {sha} hoặc {xungDot:true} nếu trên web vừa có bản mới hơn. */
 export async function day(blob, sha, cfg = docCauHinh()) {
-  const body = { message: `cap nhat ${new Date().toISOString()}`, content: b64utf8(JSON.stringify(blob)) };
+  if (!cfg.token) throw new Error('Máy này chưa có quyền đăng lên web (chưa dán token).');
+  const body = { message: `cap nhat so ${new Date().toISOString()}`, content: b64utf8(JSON.stringify(blob)) };
   if (sha) body.sha = sha;
-  const d = await goi(cfg, FILE, { method: 'PUT', body: JSON.stringify(body) });
-  if (d.xungDot) return d;
+  const r = await layCoHanGio(`${API}/repos/${cfg.repo}/contents/${FILE}`, { method: 'PUT', headers: tieuDe(cfg), body: JSON.stringify(body) }, 15000);
+  if (r.status === 409 || r.status === 422) return { xungDot: true };
+  if (r.status === 401) throw new Error('Token sai hoặc đã hết hạn (401).');
+  if (r.status === 403 || r.status === 404) throw new Error('Token không có quyền ghi repo này. Cần quyền "Contents: Read and write" cho repo so-tiet-kiem.');
+  if (!r.ok) throw new Error(`GitHub báo lỗi ${r.status}.`);
+  const d = await r.json();
   return { sha: d.content.sha };
 }
 
-/** Kiểm token + repo: trả thông báo dễ hiểu. */
+/** Kiểm token có ghi được repo không. */
 export async function kiemTra(cfg) {
-  const r = await fetch(`${API}/repos/${cfg.repo}`, { headers: { Authorization: `Bearer ${cfg.token}`, Accept: 'application/vnd.github+json' } });
+  const r = await layCoHanGio(`${API}/repos/${cfg.repo}`, { headers: tieuDe(cfg) });
   if (r.status === 401) throw new Error('Token sai hoặc đã hết hạn.');
-  if (r.status === 404) throw new Error(`Không thấy repo ${cfg.repo} (sai tên, hoặc token chưa được cấp repo này).`);
+  if (r.status === 404) throw new Error(`Không thấy repo ${cfg.repo}.`);
   if (!r.ok) throw new Error(`GitHub báo lỗi ${r.status}.`);
   const j = await r.json();
-  if (!j.private) throw new Error(`Repo ${cfg.repo} đang CÔNG KHAI — dữ liệu dù đã mã hoá cũng nên để repo riêng tư.`);
-  if (j.permissions && !j.permissions.push) throw new Error('Token chỉ có quyền đọc — cần thêm quyền ghi (Contents: Read and write).');
-  return `Kết nối được ${j.full_name} (riêng tư).`;
+  if (j.permissions && !j.permissions.push) throw new Error('Token chỉ có quyền đọc — cần quyền ghi (Contents: Read and write).');
+  return `Máy này đã được quyền đăng lên web (${j.full_name}).`;
 }

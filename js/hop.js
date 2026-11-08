@@ -26,7 +26,7 @@ function mo(tieuDe, than, chan = '', focus) {
 const dong = () => dongNgan(H.el);
 
 // ───────────────────────── Cài đặt ─────────────────────────
-const TAB = [['du-lieu', 'Dữ liệu'], ['bao-mat', 'Bảo mật'], ['dong-bo', 'Đồng bộ'], ['hieu-ung', 'Hiệu ứng'], ['phim', 'Phím tắt']];
+const TAB = [['du-lieu', 'Dữ liệu'], ['bao-mat', 'Bảo mật'], ['dong-bo', 'Đăng lên web'], ['hieu-ung', 'Hiệu ứng'], ['phim', 'Phím tắt']];
 
 export function moCaiDat(tab = 'du-lieu') {
   const nav = `<div class="pills co-bong" role="tablist" aria-label="Mục cài đặt" id="tab-cd"><span class="bong" aria-hidden="true"></span>${TAB.map(([id, ten]) => `<button class="pill" role="tab" data-tab="${id}" aria-selected="${id === tab}" aria-pressed="${id === tab}">${ten}</button>`).join('')}</div>`;
@@ -76,7 +76,7 @@ function giuDeXoa(nut, xong) {
 }
 
 const tabBaoMat = () => `
-  <div class="the-cai-dat"><h3>Đổi mật khẩu</h3><p>Dữ liệu sẽ được mã hoá lại bằng mật khẩu mới (cả bản trên GitHub nếu đang đồng bộ). Máy khác phải gõ mật khẩu mới.</p>
+  <div class="the-cai-dat"><h3>Đổi mật khẩu</h3><p>Dữ liệu được mã hoá lại bằng mật khẩu mới, cả bản trên web (phải làm ở máy có quyền đăng lên web). Máy khác sẽ phải gõ mật khẩu mới.</p>
     <div class="truong"><label for="mk-cu">Mật khẩu đang dùng</label><input class="inp" type="password" id="mk-cu" autocomplete="current-password"></div>
     <div class="hai-cot"><div class="truong"><label for="mk-moi">Mật khẩu mới</label><input class="inp" type="password" id="mk-moi" autocomplete="new-password"></div>
     <div class="truong"><label for="mk-moi2">Gõ lại</label><input class="inp" type="password" id="mk-moi2" autocomplete="new-password"></div></div>
@@ -106,41 +106,42 @@ function ganBaoMat() {
 
 const tabDongBo = () => {
   const c = docCauHinh();
+  const coWeb = api.coBanWeb?.();
+  const link = `https://github.com/settings/personal-access-tokens/new?name=so-tiet-kiem&description=${encodeURIComponent('Dang so tiet kiem len web')}&target_name=${encodeURIComponent(c.repo.split('/')[0])}&expires_in=366&contents=write`;
   return `
-  <div class="the-cai-dat"><h3>Dùng chung điện thoại ↔ máy tính qua GitHub</h3>
-    <p>Web đẩy <b>bản đã mã hoá</b> lên một repo <b>riêng tư</b>; máy khác kéo về và mở bằng cùng mật khẩu. Token chỉ lưu trên máy đang dùng, không gửi đi đâu ngoài GitHub.</p>
-    <ol style="margin:0;padding-left:18px;font-size:13px;color:var(--chu-sang-phu);display:flex;flex-direction:column;gap:4px">
-      <li>Mở <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → tạo token mới (fine-grained)</a>.</li>
-      <li>Repository access: <b>Only select repositories</b> → chọn <b>${esc(c.repo.split('/')[1] || 'so-tiet-kiem-du-lieu')}</b>.</li>
+  <div class="the-cai-dat"><h3>Sổ trên web</h3>
+    <p>${coWeb ? 'Sổ <b>đã có trên web</b>' : 'Sổ <b>chưa đăng lên web</b>'}: ai mở link và gõ đúng mật khẩu là xem được, không cần tài khoản. Trên web chỉ có bản <b>đã mã hoá</b> — không có mật khẩu thì không đọc được.</p>
+    <p><b>Máy này: ${c.token ? 'được đăng thay đổi lên web' : 'chỉ xem'}</b>. ${c.token ? `Lần đăng cuối: ${c.lanCuoi ? fmtTime(c.lanCuoi) : 'chưa'}.` : 'Sửa trên máy này vẫn lưu được, nhưng chỉ nằm trên máy này cho tới khi dán token bên dưới.'}</p></div>
+  <div class="the-cai-dat"><h3>${c.token ? 'Quyền đăng lên web' : 'Cho máy này đăng thay đổi lên web (làm 1 lần)'}</h3>
+    ${c.token ? '' : `<ol style="margin:0;padding-left:18px;font-size:13px;color:var(--chu-sang-phu);display:flex;flex-direction:column;gap:4px">
+      <li>Mở <a href="${link}" target="_blank" rel="noopener">GitHub → tạo token</a> (đăng nhập tài khoản ${esc(c.repo.split('/')[0])}).</li>
+      <li>Repository access: <b>Only select repositories</b> → chọn <b>${esc(c.repo.split('/')[1])}</b>.</li>
       <li>Permissions → Repository → <b>Contents: Read and write</b>. Hạn dùng tuỳ ý (vd 1 năm).</li>
-      <li>Bấm Generate, chép token dán vào ô dưới → "Kiểm tra &amp; lưu". Làm lại bước 4 trên điện thoại.</li>
-    </ol></div>
-  <div class="the-cai-dat">
-    <div class="truong"><label for="db-repo">Repo dữ liệu (riêng tư)</label><input class="inp" id="db-repo" value="${esc(c.repo)}" autocomplete="off" spellcheck="false"></div>
+      <li>Bấm Generate, chép token dán vào ô dưới → "Kiểm tra &amp; lưu".</li>
+    </ol>`}
     <div class="truong"><label for="db-token">Token</label><div class="mat-khau"><input class="inp" id="db-token" type="password" value="${esc(c.token)}" autocomplete="off" spellcheck="false" placeholder="github_pat_…"><button type="button" data-hien-mk="db-token" aria-label="Hiện token">${svg('eye')}</button></div></div>
     <p class="loi-chu" id="db-loi" role="alert"></p>
-    <p class="card__sub" id="db-tt">${c.token ? `Lần đồng bộ cuối: ${c.lanCuoi ? fmtTime(c.lanCuoi) : 'chưa'}` : 'Chưa bật — dữ liệu chỉ nằm trên máy này.'}</p>
-    <div class="hang-nut"><button class="btn btn--dac" id="db-luu">Kiểm tra &amp; lưu</button>${c.token ? `<button class="btn btn--ink" id="db-ngay">${svg('tai-lai')}Đồng bộ ngay</button><button class="btn btn--nguy" id="db-ngat">Ngắt trên máy này</button>` : ''}</div></div>`;
+    <p class="card__sub" id="db-tt"></p>
+    <div class="hang-nut"><button class="btn btn--dac" id="db-luu">Kiểm tra &amp; lưu</button>${c.token ? `<button class="btn btn--ink" id="db-ngay">${svg('tai-lai')}Đăng / tải lại ngay</button><button class="btn btn--nguy" id="db-ngat">Gỡ quyền trên máy này</button>` : `<button class="btn btn--ink" id="db-ngay">${svg('tai-lai')}Tải lại bản trên web</button>`}</div></div>`;
 };
 
 function ganDongBo() {
   $('#db-luu').onclick = async (e) => {
     const nut = e.currentTarget;
-    const cfg = { ...docCauHinh(), repo: $('#db-repo').value.trim(), token: $('#db-token').value.trim() };
-    if (!/^[\w.-]+\/[\w.-]+$/.test(cfg.repo)) { $('#db-loi').textContent = 'Tên repo dạng chu-tai-khoan/ten-repo.'; return; }
+    const cfg = { ...docCauHinh(), token: $('#db-token').value.trim() };
     if (!cfg.token) { $('#db-loi').textContent = 'Dán token vào.'; return; }
     nut.disabled = true; $('#db-tt').textContent = 'Đang kiểm tra…';
     try {
       const msg = await kiemTra(cfg);
-      ghiCauHinh({ ...cfg, sha: cfg.repo === docCauHinh().repo ? docCauHinh().sha : '' });
+      ghiCauHinh(cfg);
       $('#db-loi').textContent = ''; $('#db-tt').textContent = msg;
       await api.dongBoNgay();
       veTab('dong-bo');
     } catch (er) { if ($('#db-loi')) { $('#db-loi').textContent = er.message; $('#db-tt').textContent = ''; } }
     nut.disabled = false;
   };
-  if ($('#db-ngay')) $('#db-ngay').onclick = async () => { await api.dongBoNgay(); veTab('dong-bo'); };
-  if ($('#db-ngat')) $('#db-ngat').onclick = () => { ghiCauHinh({ ...docCauHinh(), token: '', sha: '' }); api.dongBoNgay(); veTab('dong-bo'); app.thongBao('Đã gỡ token khỏi máy này'); };
+  $('#db-ngay').onclick = async () => { await api.dongBoNgay(); veTab('dong-bo'); };
+  if ($('#db-ngat')) $('#db-ngat').onclick = () => { ghiCauHinh({ ...docCauHinh(), token: '', sha: '' }); veTab('dong-bo'); api.dongBoNgay(); app.thongBao('Đã gỡ token khỏi máy này — máy này giờ chỉ xem'); };
 }
 
 const tabHieuUng = () => {

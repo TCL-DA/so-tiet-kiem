@@ -1,8 +1,10 @@
-// Két sắt: mã hoá AES-GCM 256 bằng khoá dẫn từ mật khẩu (PBKDF2-SHA256), lưu trên máy (localStorage)
-// và "nhớ máy này" bằng khoá không xuất được, cất trong IndexedDB.
+// Két sắt: mã hoá AES-GCM 256. Khoá dẫn từ mật khẩu bằng Argon2id (64 MB, 4 vòng — tốn bộ nhớ nên
+// máy dò mật khẩu chạy rất chậm); bản cũ dùng PBKDF2-SHA256 vẫn mở được.
+// Lưu trên máy (localStorage); "nhớ máy này" = khoá không xuất được, cất trong IndexedDB.
 
 const LS_BLOB = 'stk.blob';
-const ITER = 310_000;
+const LS_CU = 'stk.blob.cu';
+const ARGON = { m: 65536, t: 4, p: 1 };
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
@@ -16,18 +18,49 @@ const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
 export const taoMuoi = () => b64(crypto.getRandomValues(new Uint8Array(16)));
 
-export async function danKhoa(matKhau, muoiB64, iter = ITER) {
+let hwPromise = null;
+function napArgon() {
+  if (window.hashwasm?.argon2id) return Promise.resolve(window.hashwasm);
+  hwPromise ||= new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'lib/argon2.umd.min.js';
+    s.onload = () => res(window.hashwasm);
+    s.onerror = () => { hwPromise = null; rej(new Error('Không tải được bộ mã hoá — kiểm tra mạng rồi thử lại.')); };
+    document.head.appendChild(s);
+  });
+  return hwPromise;
+}
+
+/** Tham số dẫn khoá cho một sổ mới. */
+export const thamMoi = () => ({ kdf: 'argon2id', salt: taoMuoi(), ...ARGON });
+
+/** Rút tham số dẫn khoá từ một bản mã hoá (mới hoặc cũ). */
+export const thamCua = (blob) => (blob.kdf === 'argon2id'
+  ? { kdf: 'argon2id', salt: blob.salt, m: blob.m, t: blob.t, p: blob.p }
+  : { kdf: 'PBKDF2-SHA256', salt: blob.salt, iter: blob.iter || 310_000 });
+
+/** Dẫn khoá AES từ mật khẩu + tham số (nhận cả bản mã hoá làm tham số). */
+export async function danKhoa(matKhau, tham) {
+  const th = tham.ct ? thamCua(tham) : tham;
+  if (th.kdf === 'argon2id') {
+    const hw = await napArgon();
+    const raw = await hw.argon2id({
+      password: matKhau, salt: unb64(th.salt), parallelism: th.p, iterations: th.t,
+      memorySize: th.m, hashLength: 32, outputType: 'binary',
+    });
+    return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']);
+  }
   const goc = await crypto.subtle.importKey('raw', enc.encode(matKhau), 'PBKDF2', false, ['deriveKey']);
   return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', hash: 'SHA-256', salt: unb64(muoiB64), iterations: iter },
+    { name: 'PBKDF2', hash: 'SHA-256', salt: unb64(th.salt), iterations: th.iter },
     goc, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt'],
   );
 }
 
-export async function maHoa(obj, khoa, muoi) {
+export async function maHoa(obj, khoa, tham) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, khoa, enc.encode(JSON.stringify(obj)));
-  return { v: 1, alg: 'AES-GCM-256', kdf: 'PBKDF2-SHA256', iter: ITER, salt: muoi, iv: b64(iv), ct: b64(ct), t: Date.now() };
+  return { v: 2, alg: 'AES-GCM-256', ...tham, iv: b64(iv), ct: b64(ct), luc: Date.now() };
 }
 
 /** Giải mã; sai mật khẩu thì ném lỗi. */
@@ -43,6 +76,10 @@ export function ghiMay(blob) {
   try { localStorage.setItem(LS_BLOB, JSON.stringify(blob)); return true; } catch { return false; }
 }
 export function xoaMay() { try { localStorage.removeItem(LS_BLOB); } catch { /* bỏ qua */ } }
+/** Cất bản trên máy sang chỗ dự phòng trước khi thay bằng bản trên web. */
+export function catDuPhong() {
+  try { const s = localStorage.getItem(LS_BLOB); if (s) localStorage.setItem(LS_CU, s); } catch { /* bỏ qua */ }
+}
 
 // ── IndexedDB: nhớ khoá trên máy này ──
 function moDb() {

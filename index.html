@@ -85,7 +85,7 @@
           <button type="button" data-hien-mk="mk2" aria-label="Hiện mật khẩu"><svg class="i"><use href="#i-eye"/></svg></button>
         </div>
         <div class="do-manh" id="do-manh" data-d="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-        <p class="card__sub" id="goi-y-mk">Ít nhất 8 ký tự. Quên mật khẩu là KHÔNG mở lại được — nhớ giữ file Excel gốc / file sao lưu.</p>
+        <p class="card__sub" id="goi-y-mk">Quên mật khẩu là KHÔNG mở lại được — nhớ giữ file Excel gốc / file sao lưu.</p>
       </div>
       <label class="o-tick"><input type="checkbox" id="nho-may" checked> Nhớ trên máy này 30 ngày</label>
       <p class="loi-chu" id="loi-khoa" role="alert"></p>
@@ -106,7 +106,7 @@
     <a href="#giao-dich">Giao dịch</a>
   </nav>
   <div class="nav__act">
-    <span class="dong-bo" id="dong-bo" title="Đồng bộ GitHub"><svg class="i"><use href="#i-may"/></svg><span>Chỉ trên máy này</span></span>
+    <span class="dong-bo" id="dong-bo" title="Bản trên web"><svg class="i"><use href="#i-may"/></svg><span>Đang tải…</span></span>
     <button class="btn btn--icon" id="btn-an-so" aria-pressed="false" aria-label="Ẩn số tiền (H)" title="Ẩn số tiền (H)"><svg class="i"><use href="#i-eye"/></svg></button>
     <button class="btn btn--icon" id="btn-khoa" aria-label="Khoá sổ (L)" title="Khoá sổ (L)"><svg class="i"><use href="#i-khoa"/></svg></button>
     <button class="btn btn--icon" id="btn-cai-dat" aria-label="Cài đặt" title="Cài đặt"><svg class="i"><use href="#i-cai-dat"/></svg></button>
@@ -273,7 +273,7 @@
 
   <footer class="chan">
     <p id="chan-tom"></p>
-    <p>Dữ liệu mã hoá AES-256 bằng mật khẩu của bạn, chỉ nằm trên máy này<span id="chan-dong-bo"></span>. Phím tắt: <kbd>N</kbd> thêm · <kbd>/</kbd> tìm · <kbd>H</kbd> ẩn số · <kbd>?</kbd> tất cả.</p>
+    <p>Dữ liệu mã hoá AES-256 (khoá Argon2id dẫn từ mật khẩu).<span id="chan-dong-bo"></span> Phím tắt: <kbd>N</kbd> thêm · <kbd>/</kbd> tìm · <kbd>H</kbd> ẩn số · <kbd>?</kbd> tất cả.</p>
   </footer>
 </main>
 

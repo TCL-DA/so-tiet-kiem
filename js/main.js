@@ -12,7 +12,7 @@ import { moGiaoDich, dangMoNgan, dongNgan } from './form.js';
 import { api, moCaiDat, xemTruocFile, moVang, moMucTieu, hoiMatKhau } from './hop.js';
 import { huyHet } from './charts.js';
 
-const S = { khoa: null, muoi: null, mk: null, nho: false };   // khoá đang dùng (chỉ trong bộ nhớ)
+const S = { khoa: null, tham: null, mk: null, nho: false };   // khoá đang dùng (chỉ trong bộ nhớ)
 
 // ───────────────────────── Thông báo ─────────────────────────
 app.thongBao = (chu, o = {}) => {
@@ -42,82 +42,114 @@ app.veLai = () => {
   theoDoiHien();
 };
 
-// ───────────────────────── Lưu (mã hoá) + đẩy GitHub ─────────────────────────
+// ───────────────────────── Lưu (mã hoá) + đăng lên web ─────────────────────────
+let banWeb = null;        // {blob, sha} bản trên web lần tải gần nhất (null = web chưa có / không tải được)
+let vanTayWeb = '';       // dấu vân tay nội dung bản trên web (để biết máy này có sửa chưa đăng)
 let dangLuu = Promise.resolve();
 app.luu = () => {
   dangLuu = dangLuu.then(async () => {
     if (!S.khoa) return;
-    const blob = await V.maHoa(app.st, S.khoa, S.muoi);
+    const blob = await V.maHoa(app.st, S.khoa, S.tham);
     if (!V.ghiMay(blob)) app.thongBao('Trình duyệt không cho lưu (bộ nhớ đầy hoặc chế độ ẩn danh) — nhớ xuất file sao lưu.', { loi: true });
-    if (SY.coDongBo()) henDay();
+    if (SY.coQuyenDang()) henDay(); else ttDongBo();
   }).catch((e) => app.thongBao(`Lỗi khi lưu: ${e.message}`, { loi: true }));
   return dangLuu;
 };
 
-function ttDongBo(tt, chu) {
+/** Dấu vân tay nội dung để biết hai bản có khác nhau không. */
+const vanTay = (st) => JSON.stringify([st.tx.map((t) => `${t.id}:${t.sua}:${t.xoa || 0}`).sort(), st.vang.map((t) => `${t.id}:${t.sua}:${t.xoa || 0}`).sort(), st.caiDat, st.giaVang.thuCong, st.giaVang.loai, st.giaVang.coSo, st.giaVang.nguon]);
+
+function ttDongBo(tt = '', chu = '') {
   const el = $('#dong-bo');
+  const quyen = SY.coQuyenDang();
+  const chuaDang = !!(app.st && banWeb && vanTayWeb && vanTay(app.st) !== vanTayWeb);
+  if (!chu) {
+    chu = !banWeb ? (quyen ? 'Chưa đăng lên web' : 'Chỉ trên máy này')
+      : chuaDang ? (quyen ? 'Đang chờ đăng…' : 'Có sửa chưa đăng lên web')
+        : quyen ? `Đã đăng lên web ${fmtTime(SY.docCauHinh().lanCuoi || Date.now()).split(' ')[0]}` : 'Đang xem bản trên web';
+  }
   el.classList.toggle('dang', tt === 'dang');
-  el.classList.toggle('loi', tt === 'loi');
+  el.classList.toggle('loi', tt === 'loi' || (chuaDang && !quyen));
   el.querySelector('span').textContent = chu;
-  el.title = chu;
-  $('#chan-dong-bo').textContent = SY.coDongBo() ? ` và bản mã hoá trong repo riêng tư ${SY.docCauHinh().repo}` : '';
+  el.title = chuaDang && !quyen ? 'Máy này chưa có quyền đăng lên web (Cài đặt → Đăng lên web). Thay đổi đang lưu trên máy này.' : chu;
+  $('#chan-dong-bo').textContent = banWeb ? ' Bản trên web cũng là bản đã mã hoá — ai có link + đúng mật khẩu mới xem được.' : ' Dữ liệu chỉ nằm trên máy này.';
 }
 
 const henDay = debounce(() => dongBo(), 2500);
 let dangDongBo = false, canLai = false;
+const luuSha = (sha) => SY.ghiCauHinh({ ...SY.docCauHinh(), sha, lanCuoi: Date.now() });
 
-/** Kéo về → gộp → đẩy lên nếu máy này có thay đổi. */
-async function dongBo() {
-  const cfg = SY.docCauHinh();
-  if (!cfg.token) { ttDongBo('', 'Chỉ trên máy này'); return; }
+/** Chuẩn hoá dữ liệu vừa giải mã (bản cũ thiếu trường thì lấy mặc định). */
+function chuanHoa(st) {
+  const m = trangThaiMoi();
+  return donDauXoa({ ...m, ...st, giaVang: { ...m.giaVang, ...(st.giaVang || {}) }, caiDat: { ...m.caiDat, ...(st.caiDat || {}) } });
+}
+
+/**
+ * Tải bản trên web → gộp với máy này → máy có quyền thì đăng lên lại.
+ * Bản trên web khác "dòng" (khoá bằng mật khẩu khác / sổ tạo riêng) thì lấy bản web làm chuẩn, cất bản máy dự phòng.
+ */
+async function dongBo({ im = false } = {}) {
   if (!S.khoa) return;
   if (dangDongBo) { canLai = true; return; }
-  dangDongBo = true; ttDongBo('dang', 'Đang đồng bộ…');
+  dangDongBo = true;
+  ttDongBo('dang', 'Đang tải bản trên web…');
+  const cfg = SY.docCauHinh();
   try {
     for (let lan = 0; lan < 3; lan++) {
       const xa = await SY.keo(cfg);
-      let sha = xa?.sha || '';
-      if (xa) {
-        let khoaXa = S.khoa;
-        if (xa.blob.salt !== S.muoi) {
-          let mk = S.mk;
-          if (!mk) mk = await hoiMatKhau('Bản trên GitHub được khoá bằng mật khẩu khác với máy này đang nhớ (có thể đã đổi mật khẩu ở máy khác). Gõ mật khẩu hiện tại để gộp.');
-          if (!mk) throw new Error('Chưa gộp được — cần mật khẩu.');
-          khoaXa = await V.danKhoa(mk, xa.blob.salt, xa.blob.iter);
+      if (xa) banWeb = xa;
+      if (!xa) {
+        if (cfg.token) {
+          const r = await SY.day(await V.maHoa(app.st, S.khoa, S.tham), '', cfg);
+          if (r.xungDot) continue;
+          luuSha(r.sha); banWeb = { blob: null, sha: r.sha }; vanTayWeb = vanTay(app.st);
         }
-        let stXa;
-        try { stXa = await V.giaiMa(xa.blob, khoaXa); } catch { throw new Error('Không giải mã được bản trên GitHub — mật khẩu khác.'); }
-        if (xa.blob.salt !== S.muoi && S.mk) {
-          // Máy khác đã đổi mật khẩu → máy này theo khoá mới
-          S.khoa = khoaXa; S.muoi = xa.blob.salt;
-          if (S.nho) await V.nhoKhoa(S.khoa, S.muoi);
-        }
-        const truoc = vanTay(app.st);
-        const gopLai = gop(app.st, stXa);
-        if (vanTay(gopLai) !== truoc) {
-          app.st = donDauXoa(gopLai);
-          app.kq = tinh(app.st);
-          app.veLai();
-          V.ghiMay(await V.maHoa(app.st, S.khoa, S.muoi));
-        }
-        if (vanTay(app.st) === vanTay(stXa) && xa.blob.salt === S.muoi) { SY.ghiCauHinh({ ...SY.docCauHinh(), sha, lanCuoi: Date.now() }); break; }
+        break;
       }
-      const r = await SY.day(await V.maHoa(app.st, S.khoa, S.muoi), sha, cfg);
+      let stXa;
+      if (xa.blob.salt === S.tham.salt) {
+        try { stXa = await V.giaiMa(xa.blob, S.khoa); } catch { throw new Error('Bản trên web hỏng hoặc không đọc được.'); }
+      } else {
+        let khoaXa = null, mk = S.mk;
+        if (mk) { try { khoaXa = await V.danKhoa(mk, xa.blob); stXa = await V.giaiMa(xa.blob, khoaXa); } catch { stXa = null; } }
+        if (!stXa) {
+          mk = await hoiMatKhau('Bản trên web đang khoá bằng mật khẩu khác máy này (đã đổi mật khẩu, hoặc máy này có sổ tạo riêng). Gõ mật khẩu của bản trên web để lấy về — bản đang có trên máy sẽ được cất dự phòng.');
+          if (!mk) throw new Error('Chưa lấy bản trên web — cần mật khẩu.');
+          khoaXa = await V.danKhoa(mk, xa.blob);
+          try { stXa = await V.giaiMa(xa.blob, khoaXa); } catch { throw new Error('Sai mật khẩu của bản trên web.'); }
+        }
+        V.catDuPhong();
+        V.ghiMay(xa.blob);
+        S.khoa = khoaXa; S.tham = V.thamCua(xa.blob); S.mk = mk;
+        if (S.nho) await V.nhoKhoa(S.khoa, S.tham.salt);
+        app.st = chuanHoa(stXa); app.kq = tinh(app.st);
+        UI.datLaiBieuDo(); huyHet(); app.veLai();
+        vanTayWeb = vanTay(app.st); luuSha(xa.sha);
+        app.thongBao('Đã lấy bản trên web (bản cũ trên máy đã cất dự phòng)', { tich: true });
+        break;
+      }
+      vanTayWeb = vanTay(stXa);
+      const gopLai = donDauXoa(gop(app.st, stXa));
+      if (vanTay(gopLai) !== vanTay(app.st)) {
+        app.st = gopLai; app.kq = tinh(app.st); app.veLai();
+        V.ghiMay(await V.maHoa(app.st, S.khoa, S.tham));
+      }
+      if (vanTay(app.st) === vanTayWeb || !cfg.token) { if (cfg.token) luuSha(xa.sha); break; }
+      const r = await SY.day(await V.maHoa(app.st, S.khoa, S.tham), xa.sha, cfg);
       if (r.xungDot) continue;
-      SY.ghiCauHinh({ ...SY.docCauHinh(), sha: r.sha, lanCuoi: Date.now() });
+      luuSha(r.sha); banWeb = { ...xa, sha: r.sha }; vanTayWeb = vanTay(app.st);
       break;
     }
-    ttDongBo('', `Đã đồng bộ ${fmtTime(Date.now()).split(' ')[0]}`);
+    ttDongBo();
   } catch (e) {
-    ttDongBo('loi', 'Lỗi đồng bộ');
-    app.thongBao(`Đồng bộ GitHub: ${e.message}`, { loi: true });
+    ttDongBo('loi', 'Lỗi tải / đăng web');
+    if (!im) app.thongBao(`Bản trên web: ${e.message}`, { loi: true });
   } finally {
     dangDongBo = false;
     if (canLai) { canLai = false; henDay(); }
   }
 }
-/** Dấu vân tay nội dung để biết có khác nhau không. */
-const vanTay = (st) => JSON.stringify([st.tx.map((t) => `${t.id}:${t.sua}:${t.xoa || 0}`).sort(), st.vang.map((t) => `${t.id}:${t.sua}:${t.xoa || 0}`).sort(), st.caiDat, st.giaVang.thuCong, st.giaVang.loai, st.giaVang.coSo, st.giaVang.nguon]);
 
 // ───────────────────────── Giá vàng ─────────────────────────
 let dangLayGia = false;
@@ -140,7 +172,8 @@ async function capNhatGiaVang(ep = false) {
 
 // ───────────────────────── Màn khoá ─────────────────────────
 const K = { el: $('#khoa'), form: $('#form-khoa'), mk: $('#mk'), mk2: $('#mk2'), loi: $('#loi-khoa'), mota: $('#khoa-mo-ta'), nut: $('#nut-khoa'), phu: $('#khoa-phu') };
-let cheDoKhoa = 'mo';   // 'mo' | 'tao'
+let cheDoKhoa = 'cho';   // 'cho' (đang tải) | 'mo' | 'tao'
+const chuNut = () => ({ tao: 'Tạo sổ', mo: 'Mở sổ', cho: 'Đang tải sổ…' }[cheDoKhoa]);
 
 function hienKhoa(cheDo, moTa) {
   cheDoKhoa = cheDo;
@@ -149,15 +182,13 @@ function hienKhoa(cheDo, moTa) {
   document.body.style.overflow = 'hidden';
   $('#truong-mk2').hidden = cheDo !== 'tao';
   K.mk.autocomplete = cheDo === 'tao' ? 'new-password' : 'current-password';
-  K.nut.textContent = cheDo === 'tao' ? 'Tạo sổ' : 'Mở sổ';
-  K.mota.textContent = moTa || (cheDo === 'tao' ? 'Lần đầu dùng trên máy này. Đặt mật khẩu để mã hoá sổ.' : 'Gõ mật khẩu để mở.');
+  K.nut.textContent = chuNut();
+  K.nut.disabled = cheDo === 'cho';
+  K.mota.textContent = moTa || { tao: 'Chưa có sổ nào. Đặt mật khẩu để tạo sổ mới.', mo: 'Gõ mật khẩu để xem sổ.', cho: 'Đang tải sổ…' }[cheDo];
   K.loi.textContent = '';
   K.mk.value = K.mk2.value = '';
-  const cfg = SY.docCauHinh();
-  K.phu.innerHTML = cheDo === 'tao'
-    ? `<button type="button" id="khoa-github">Đã có sổ trên máy khác? Lấy từ GitHub</button>`
-    : `<button type="button" id="khoa-quen">Quên mật khẩu?</button>${cfg.token ? '' : ''}`;
-  setTimeout(() => K.mk.focus(), 60);
+  K.phu.innerHTML = cheDo === 'mo' ? '<button type="button" id="khoa-quen">Quên mật khẩu?</button>' : '';
+  if (cheDo !== 'cho') setTimeout(() => K.mk.focus(), 60);
 }
 
 function lacKhoa(chu) {
@@ -166,19 +197,20 @@ function lacKhoa(chu) {
   if (fx('khoa-lac')) { o.classList.remove('lac'); void o.offsetWidth; o.classList.add('lac'); }
 }
 
-async function moSo(st, khoa, muoi, mk) {
-  S.khoa = khoa; S.muoi = muoi; S.mk = mk;
-  app.st = donDauXoa({ ...trangThaiMoi(), ...st, giaVang: { ...trangThaiMoi().giaVang, ...(st.giaVang || {}) }, caiDat: { ...trangThaiMoi().caiDat, ...(st.caiDat || {}) } });
+async function moSo(st, khoa, tham, mk) {
+  S.khoa = khoa; S.tham = tham; S.mk = mk;
+  app.st = chuanHoa(st);
   app.kq = tinh(app.st);
   xoaLichSuHoanTac();
   const xong = () => { K.el.hidden = true; K.el.classList.remove('dang-mo'); document.body.style.overflow = ''; };
   if (fx('khoa-mo')) { K.el.classList.add('dang-mo'); setTimeout(xong, 520); } else xong();
-  $('#tieu-de-chinh').closest('.hero').classList.remove('in');
+  $('#tong-quan').classList.remove('in');
   app.veLai();
   requestAnimationFrame(() => $('#tong-quan').classList.add('in'));
   UI.dichBong($('#loc-kieu'));
+  ttDongBo();
   capNhatGiaVang();
-  dongBo();
+  dongBo({ im: !SY.coQuyenDang() });
   if (!app.kq.soGd) setTimeout(() => goiYNhap(), 700);
   datHenTuKhoa();
 }
@@ -189,58 +221,58 @@ function goiYNhap() {
   $('#trong-nhap').onclick = () => $('#chon-file').click();
 }
 
+/** Thử mở một bản mã hoá bằng mật khẩu (hoặc khoá có sẵn). Trả {st, khoa, blob} hoặc null. */
+async function thuMo(blob, mk, khoaSan = null) {
+  if (!blob) return null;
+  try { const khoa = khoaSan || await V.danKhoa(mk, blob); return { st: await V.giaiMa(blob, khoa), khoa, blob }; } catch { return null; }
+}
+
 K.form.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (cheDoKhoa === 'cho') return;
   const mk = K.mk.value;
+  if (!mk) { lacKhoa('Gõ mật khẩu.'); return; }
   K.nut.disabled = true;
+  K.nut.textContent = 'Đang mở…';
   try {
+    S.nho = $('#nho-may').checked;
     if (cheDoKhoa === 'tao') {
-      if (mk.length < 8) return lacKhoa('Mật khẩu cần ít nhất 8 ký tự.');
-      if (mk !== K.mk2.value) return lacKhoa('Hai lần gõ không giống nhau.');
-      const muoi = V.taoMuoi();
-      const khoa = await V.danKhoa(mk, muoi);
+      if (mk.length < 6) { lacKhoa('Mật khẩu cần ít nhất 6 ký tự.'); return; }
+      if (mk !== K.mk2.value) { lacKhoa('Hai lần gõ không giống nhau.'); return; }
+      const tham = V.thamMoi();
+      const khoa = await V.danKhoa(mk, tham);
       const st = trangThaiMoi();
-      V.ghiMay(await V.maHoa(st, khoa, muoi));
-      S.nho = $('#nho-may').checked;
-      if (S.nho) await V.nhoKhoa(khoa, muoi);
-      await moSo(st, khoa, muoi, mk);
+      V.ghiMay(await V.maHoa(st, khoa, tham));
+      if (S.nho) await V.nhoKhoa(khoa, tham.salt);
+      await moSo(st, khoa, tham, mk);
       return;
     }
-    const blob = V.docMay();
-    if (!blob) return hienKhoa('tao');
-    K.nut.textContent = 'Đang mở…';
-    const khoa = await V.danKhoa(mk, blob.salt, blob.iter);
-    let st;
-    try { st = await V.giaiMa(blob, khoa); } catch { return lacKhoa('Sai mật khẩu.'); }
-    S.nho = $('#nho-may').checked;
-    if (S.nho) await V.nhoKhoa(khoa, blob.salt); else await V.quenKhoa();
-    await moSo(st, khoa, blob.salt, mk);
-  } finally { K.nut.disabled = false; K.nut.textContent = cheDoKhoa === 'tao' ? 'Tạo sổ' : 'Mở sổ'; }
+    const local = V.docMay(), web = banWeb?.blob || null;
+    const cungDong = !!(local && web && local.salt === web.salt);
+    let r = await thuMo(web, mk);
+    if (r) {
+      if (cungDong) r = (await thuMo(local, mk, r.khoa)) || r;      // máy có thể có sửa chưa đăng → mở bản máy, đồng bộ sẽ gộp
+      else { if (local) V.catDuPhong(); V.ghiMay(web); }
+    } else if (local && !cungDong) {
+      r = await thuMo(local, mk);                                   // sổ riêng trên máy (web chưa có / mật khẩu khác)
+    }
+    if (!r) { lacKhoa('Sai mật khẩu.'); return; }
+    if (S.nho) await V.nhoKhoa(r.khoa, r.blob.salt); else await V.quenKhoa();
+    await moSo(r.st, r.khoa, V.thamCua(r.blob), mk);
+  } catch (er) {
+    lacKhoa(er.message);
+  } finally { K.nut.disabled = false; K.nut.textContent = chuNut(); }
 });
-K.mk2.addEventListener('input', () => {});
 K.mk.addEventListener('input', () => { if (cheDoKhoa === 'tao') $('#do-manh').dataset.d = V.doManh(K.mk.value); });
 K.phu.addEventListener('click', async (e) => {
   if (e.target.id === 'khoa-quen') {
-    K.mota.innerHTML = 'Mật khẩu không khôi phục được (dữ liệu mã hoá bằng chính mật khẩu đó). Cách làm lại: tạo sổ mới rồi nhập lại file Excel gốc hoặc file sao lưu JSON.';
-    K.phu.innerHTML = '<button type="button" id="khoa-lam-lai">Xoá sổ trên máy này và tạo lại</button>';
+    K.mota.textContent = banWeb
+      ? 'Mật khẩu không khôi phục được (sổ được mã hoá bằng chính mật khẩu đó). Hỏi lại người giữ sổ.'
+      : 'Mật khẩu không khôi phục được. Cách làm lại: xoá sổ trên máy này, tạo sổ mới rồi nhập lại file Excel gốc hoặc file sao lưu JSON.';
+    K.phu.innerHTML = banWeb ? '' : '<button type="button" id="khoa-lam-lai">Xoá sổ trên máy này và tạo lại</button>';
   } else if (e.target.id === 'khoa-lam-lai') {
     if (!confirm('Xoá sổ đã mã hoá trên máy này? (File Excel / sao lưu của bạn không bị ảnh hưởng)')) return;
     V.xoaMay(); await V.quenKhoa(); hienKhoa('tao');
-  } else if (e.target.id === 'khoa-github') {
-    K.phu.innerHTML = `<div class="card" style="text-align:left;display:flex;flex-direction:column;gap:10px">
-      <div class="truong"><label for="kg-repo">Repo dữ liệu</label><input class="inp" id="kg-repo" value="${esc(SY.docCauHinh().repo)}"></div>
-      <div class="truong"><label for="kg-token">Token GitHub (fine-grained, quyền Contents)</label><input class="inp" id="kg-token" type="password" autocomplete="off"></div>
-      <p class="loi-chu" id="kg-loi"></p><button type="button" class="btn btn--dac" id="kg-keo">Lấy sổ về</button></div>`;
-  } else if (e.target.id === 'kg-keo') {
-    const cfg = { ...SY.docCauHinh(), repo: $('#kg-repo').value.trim(), token: $('#kg-token').value.trim() };
-    try {
-      await SY.kiemTra(cfg);
-      const xa = await SY.keo(cfg);
-      if (!xa) throw new Error('Repo chưa có sổ nào — tạo sổ ở đây rồi bật đồng bộ là được.');
-      SY.ghiCauHinh({ ...cfg, sha: xa.sha });
-      V.ghiMay(xa.blob);
-      hienKhoa('mo', 'Đã lấy sổ từ GitHub. Gõ mật khẩu của sổ để mở.');
-    } catch (er) { $('#kg-loi').textContent = er.message; }
   }
 });
 document.addEventListener('click', (e) => {
@@ -253,13 +285,14 @@ document.addEventListener('click', (e) => {
   b.setAttribute('aria-label', hien ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
 });
 
+const coSo = () => !!(V.docMay() || banWeb?.blob);
 function khoaSo() {
-  S.khoa = S.muoi = S.mk = null;
+  S.khoa = S.tham = S.mk = null;
   V.quenKhoa();
   app.st = null; app.kq = null;
   huyHet(); UI.datLaiBieuDo();
   if (dangMoNgan()) dongNgan();
-  hienKhoa(V.docMay() ? 'mo' : 'tao');
+  hienKhoa(coSo() ? 'mo' : 'tao');
 }
 
 let henKhoa;
@@ -297,30 +330,30 @@ api.apDung = (kq, cheDo) => {
 };
 
 api.doiMatKhau = async (cu, moi) => {
-  const blob = V.docMay();
-  const kCu = await V.danKhoa(cu, blob.salt, blob.iter);
-  try { await V.giaiMa(blob, kCu); } catch { throw new Error('Mật khẩu đang dùng không đúng.'); }
-  S.muoi = V.taoMuoi();
-  S.khoa = await V.danKhoa(moi, S.muoi);
+  if (banWeb?.blob && !SY.coQuyenDang()) throw new Error('Sổ đang có trên web: đổi mật khẩu phải làm ở máy có quyền đăng lên web (Cài đặt → Đăng lên web), để mọi máy cùng dùng mật khẩu mới.');
+  if (!(await thuMo(V.docMay(), cu))) throw new Error('Mật khẩu đang dùng không đúng.');
+  S.tham = V.thamMoi();
+  S.khoa = await V.danKhoa(moi, S.tham);
   S.mk = moi;
-  if (S.nho) await V.nhoKhoa(S.khoa, S.muoi);
+  if (S.nho) await V.nhoKhoa(S.khoa, S.tham.salt);
   await app.luu();
-  if (SY.coDongBo()) {
-    // Ép ghi đè bản trên GitHub bằng khoá mới
+  if (SY.coQuyenDang()) {
     const cfg = SY.docCauHinh();
     const xa = await SY.keo(cfg).catch(() => null);
-    const r = await SY.day(await V.maHoa(app.st, S.khoa, S.muoi), xa?.sha || '', cfg);
-    if (r.sha) SY.ghiCauHinh({ ...SY.docCauHinh(), sha: r.sha, lanCuoi: Date.now() });
+    const blob = await V.maHoa(app.st, S.khoa, S.tham);
+    const r = await SY.day(blob, xa?.sha || '', cfg);
+    if (r.sha) { luuSha(r.sha); banWeb = { blob, sha: r.sha }; vanTayWeb = vanTay(app.st); ttDongBo(); }
   }
 };
 api.dongBoNgay = () => dongBo();
 api.khoa = () => khoaSo();
+api.coBanWeb = () => !!banWeb?.blob;
 api.xoaHet = async () => {
   V.xoaMay(); await V.quenKhoa();
   app.thongBao('Đã xoá sổ trên máy này');
   S.khoa = null; app.st = null;
   huyHet(); UI.datLaiBieuDo();
-  hienKhoa('tao');
+  hienKhoa(banWeb?.blob ? 'mo' : 'tao');
 };
 
 // ───────────────────────── Sự kiện trang ─────────────────────────
@@ -508,20 +541,23 @@ async function khoiDong() {
   batTroi($('#troi'));
   ganHieuUngChuot();
   if (!fx('nav-nen')) nav.classList.add('da-cuon');
-  const blob = V.docMay();
-  if (!blob) { hienKhoa('tao'); return; }
-  const nho = await V.layKhoaDaNho();
-  if (nho && nho.muoi === blob.salt) {
-    try {
-      const st = await V.giaiMa(blob, nho.khoa);
-      S.nho = true;
-      await moSo(st, nho.khoa, nho.muoi, null);
-      return;
-    } catch { await V.quenKhoa(); }
+  hienKhoa('cho');
+  const local = V.docMay();
+  banWeb = await SY.keo().catch(() => null);
+  const cungDong = !!(local && banWeb?.blob && local.salt === banWeb.blob.salt);
+  if (local && (!banWeb?.blob || cungDong)) {
+    const nho = await V.layKhoaDaNho();
+    if (nho && nho.muoi === local.salt) {
+      const r = await thuMo(local, '', nho.khoa);
+      if (r) { S.nho = true; await moSo(r.st, r.khoa, V.thamCua(local), null); return; }
+      await V.quenKhoa();
+    }
+    hienKhoa('mo');
+    return;
   }
-  hienKhoa('mo');
+  hienKhoa(banWeb?.blob ? 'mo' : 'tao');
 }
-khoiDong().catch((e) => { console.error(e); hienKhoa(V.docMay() ? 'mo' : 'tao', `Lỗi khởi động: ${e.message}`); });
+khoiDong().catch((e) => { console.error(e); hienKhoa(coSo() ? 'mo' : 'tao', `Lỗi khởi động: ${e.message}`); });
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 window.addEventListener('storage', (e) => { if (e.key === 'stk.fx') { apFx(); capNhatTroi(); } });
