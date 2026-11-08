@@ -55,7 +55,7 @@ const tabDuLieu = () => `
 
 function ganDuLieu() {
   $('#cd-nhap').onclick = () => $('#chon-file').click();
-  $('#cd-xuat-x').onclick = async (e) => { e.currentTarget.disabled = true; try { await xuatExcel(app.st, app.kq); app.thongBao('Đã xuất file Excel', { tich: true }); } catch (er) { app.thongBao(er.message, { loi: true }); } e.currentTarget.disabled = false; };
+  $('#cd-xuat-x').onclick = async (e) => { const nut = e.currentTarget; nut.disabled = true; try { await xuatExcel(app.st, app.kq); app.thongBao('Đã xuất file Excel', { tich: true }); } catch (er) { app.thongBao(er.message, { loi: true }); } nut.disabled = false; };
   $('#cd-xuat-j').onclick = () => { xuatJson(app.st); app.thongBao('Đã xuất bản sao lưu JSON (không mã hoá — cất cẩn thận)', { tich: true }); };
   $('#cd-luu-muc').onclick = () => {
     const v = parseMoney($('#cd-muc-tieu').value);
@@ -90,14 +90,15 @@ const tabBaoMat = () => `
 function ganBaoMat() {
   $('#mk-moi').oninput = () => { $('#cd-do-manh').dataset.d = doManh($('#mk-moi').value); };
   $('#mk-doi').onclick = async (e) => {
+    const nut = e.currentTarget;
     const cu = $('#mk-cu').value, moi = $('#mk-moi').value, moi2 = $('#mk-moi2').value;
     const loi = (s) => { $('#mk-loi').textContent = s; };
     if (moi.length < 8) return loi('Mật khẩu mới cần ít nhất 8 ký tự.');
     if (moi !== moi2) return loi('Hai lần gõ mật khẩu mới không giống nhau.');
-    e.currentTarget.disabled = true;
+    nut.disabled = true;
     try { await api.doiMatKhau(cu, moi); loi(''); dong(); app.thongBao('Đã đổi mật khẩu và mã hoá lại dữ liệu', { tich: true }); }
     catch (er) { loi(er.message); }
-    e.currentTarget.disabled = false;
+    nut.disabled = false;
   };
   $('#cd-khoa').onclick = () => { dong(); api.khoa(); };
   $('#cd-tu-khoa').onchange = (e) => { app.st.caiDat.tuKhoa = +e.target.value; capNhat(); };
@@ -124,18 +125,19 @@ const tabDongBo = () => {
 
 function ganDongBo() {
   $('#db-luu').onclick = async (e) => {
+    const nut = e.currentTarget;
     const cfg = { ...docCauHinh(), repo: $('#db-repo').value.trim(), token: $('#db-token').value.trim() };
     if (!/^[\w.-]+\/[\w.-]+$/.test(cfg.repo)) { $('#db-loi').textContent = 'Tên repo dạng chu-tai-khoan/ten-repo.'; return; }
     if (!cfg.token) { $('#db-loi').textContent = 'Dán token vào.'; return; }
-    e.currentTarget.disabled = true; $('#db-tt').textContent = 'Đang kiểm tra…';
+    nut.disabled = true; $('#db-tt').textContent = 'Đang kiểm tra…';
     try {
       const msg = await kiemTra(cfg);
       ghiCauHinh({ ...cfg, sha: cfg.repo === docCauHinh().repo ? docCauHinh().sha : '' });
       $('#db-loi').textContent = ''; $('#db-tt').textContent = msg;
       await api.dongBoNgay();
       veTab('dong-bo');
-    } catch (er) { $('#db-loi').textContent = er.message; $('#db-tt').textContent = ''; }
-    e.currentTarget.disabled = false;
+    } catch (er) { if ($('#db-loi')) { $('#db-loi').textContent = er.message; $('#db-tt').textContent = ''; } }
+    nut.disabled = false;
   };
   if ($('#db-ngay')) $('#db-ngay').onclick = async () => { await api.dongBoNgay(); veTab('dong-bo'); };
   if ($('#db-ngat')) $('#db-ngat').onclick = () => { ghiCauHinh({ ...docCauHinh(), token: '', sha: '' }); api.dongBoNgay(); veTab('dong-bo'); app.thongBao('Đã gỡ token khỏi máy này'); };
@@ -248,7 +250,10 @@ export function hoiMatKhau(lyDo) {
     mo('Cần mật khẩu', `<p class="card__sub">${esc(lyDo)}</p><div class="truong"><label for="hm-mk">Mật khẩu</label><input class="inp" type="password" id="hm-mk" autocomplete="current-password"></div>`,
       '<button class="btn btn--ink" data-dong id="hm-huy">Bỏ qua</button><button class="btn btn--dac" id="hm-ok">Mở</button>', '#hm-mk');
     let xong = false;
-    const ket = (v) => { if (xong) return; xong = true; dong(); res(v); };
+    const ket = (v) => { if (xong) return; xong = true; theoDoi.disconnect(); if (!H.el.hidden) dong(); res(v); };
+    // Đóng bằng Esc / bấm nền tối cũng tính là "Bỏ qua" (không để đồng bộ treo chờ mãi)
+    const theoDoi = new MutationObserver(() => { if (H.el.hidden || !H.el.classList.contains('mo')) ket(null); });
+    setTimeout(() => theoDoi.observe(H.el, { attributes: true, attributeFilter: ['class', 'hidden'] }), 500);
     $('#hm-ok').onclick = () => ket($('#hm-mk').value);
     $('#hm-mk').onkeydown = (e) => { if (e.key === 'Enter') ket($('#hm-mk').value); };
     $('#hm-huy').addEventListener('click', () => ket(null));
