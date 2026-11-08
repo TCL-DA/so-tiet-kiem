@@ -482,6 +482,8 @@ kbd { font: 500 12px var(--f-ui); padding: 3px 7px; border-radius: 4px; border: 
 @keyframes ve-tich { from { stroke-dashoffset: 24; } }
 
 /* ───────────── Màn khoá ───────────── */
+/* Đang khoá: giấu hết nội dung phía sau, chỉ để trời sao + hộp mật khẩu */
+.dang-khoa .nav, .dang-khoa main, .dang-khoa .tabbar, .dang-khoa .toasts { visibility: hidden; }
 .khoa { position: fixed; inset: 0; z-index: var(--z-khoa); display: grid; place-items: center; padding: 24px 16px; overflow-y: auto; }
 .khoa__hop { width: min(420px, 100%); display: flex; flex-direction: column; gap: 14px; }
 .khoa__ten { text-align: center; color: var(--white); margin-bottom: 8px; }

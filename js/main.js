@@ -177,6 +177,7 @@ const chuNut = () => ({ tao: 'Tạo sổ', mo: 'Mở sổ', cho: 'Đang tải s�
 
 function hienKhoa(cheDo, moTa) {
   cheDoKhoa = cheDo;
+  document.body.classList.add('dang-khoa');
   K.el.hidden = false;
   K.el.classList.remove('dang-mo');
   document.body.style.overflow = 'hidden';
@@ -202,6 +203,7 @@ async function moSo(st, khoa, tham, mk) {
   app.st = chuanHoa(st);
   app.kq = tinh(app.st);
   xoaLichSuHoanTac();
+  document.body.classList.remove('dang-khoa');
   const xong = () => { K.el.hidden = true; K.el.classList.remove('dang-mo'); document.body.style.overflow = ''; };
   if (fx('khoa-mo')) { K.el.classList.add('dang-mo'); setTimeout(xong, 520); } else xong();
   $('#tong-quan').classList.remove('in');
